@@ -25,8 +25,16 @@ export default function RevenueChart() {
   };
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-md">
-      <h2 className="mb-4 text-xl font-semibold">
+<div className="
+rounded-2xl
+bg-white
+p-6
+shadow-md
+transition-all
+duration-300
+hover:shadow-xl
+hover:scale-[1.01]
+">      <h2 className="mb-4 text-xl font-semibold">
         Revenue Overview
       </h2>
 

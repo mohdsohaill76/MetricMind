@@ -1,15 +1,32 @@
+"use client";
+
+import NotificationDropdown from "./NotificationDropdown";
+import ProfileDropdown from "./ProfileDropdown";
+import ThemeToggle from "./ThemeToggle";
+
 export default function Navbar() {
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-white px-8">
-      <h2 className="text-xl font-semibold">
-        Dashboard
-      </h2>
+<header className="card flex h-16 items-center justify-between border-b px-8 shadow-sm">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">
+          MetricMind Dashboard
+        </h1>
+
+        <p className="text-sm text-gray-500">
+          AI Powered Business Analytics
+        </p>
+      </div>
 
       <div className="flex items-center gap-4">
-        <button className="text-xl">🔔</button>
 
-        <div className="h-10 w-10 rounded-full bg-blue-600"></div>
+        <ThemeToggle />
+
+        <NotificationDropdown />
+
+        <ProfileDropdown />
+
       </div>
+
     </header>
   );
 }

@@ -11,8 +11,8 @@ import {
 import AIInsights from "../src/components/dashboard/AIInsights";
 import SalesChart from "../src/components/charts/SalesChart";
 import PerformanceChart from "../src/components/charts/PerformanceChart";
-
-
+import RecentActivity from "../src/components/dashboard/RecentActivity";
+import FilterBar from "../src/components/dashboard/FilterBar";
 export default function Home() {
   return (
     <div className="flex">
@@ -29,8 +29,10 @@ export default function Home() {
             </h1>
 
             <p className="mt-2 text-gray-600">
-              Welcome back! Here's your business overview.
+                Welcome back! Here's your business overview.
             </p>
+
+            <FilterBar />
           </div>
 
           {/* KPI Cards */}
@@ -84,7 +86,10 @@ export default function Home() {
     <PerformanceChart />
 
 </div>
-
+  {/* Recent Activity */}
+  <div className="mt-6">
+    <RecentActivity />
+  </div>
         </main>
       </div>
     </div>

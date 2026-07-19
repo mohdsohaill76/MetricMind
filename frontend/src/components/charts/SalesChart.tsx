@@ -38,8 +38,16 @@ export default function SalesChart() {
 
     return (
 
-        <div className="bg-white rounded-2xl shadow-md p-6">
-
+<div className="
+rounded-2xl
+bg-white
+p-6
+shadow-md
+transition-all
+duration-300
+hover:shadow-xl
+hover:scale-[1.01]
+">
             <h2 className="text-xl font-semibold mb-5">
                 Sales by Region
             </h2>
