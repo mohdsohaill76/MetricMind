@@ -1,7 +1,8 @@
 -- customer dimension table
-create table business.dim_customer (
+create table business.dim_customer
+(
     customer_id int primary key,
-    customer_name varchar(100) not null,
+    customer_name varchar(100),
     email varchar(100),
     phone varchar(20),
     city varchar(50),
