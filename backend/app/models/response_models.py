@@ -1,5 +1,7 @@
 """Pydantic models for API response payloads."""
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -10,6 +12,10 @@ class ChatResponse(BaseModel):
 
 
 class UploadResponse(BaseModel):
-    """Response payload containing an uploaded file name."""
+    """Response payload containing a CSV dataset preview."""
 
     filename: str
+    rows: int
+    columns: int
+    column_names: list[str]
+    preview: list[dict[str, Any]]

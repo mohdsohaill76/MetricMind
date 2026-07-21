@@ -9,6 +9,7 @@ from app.models.request_models import ChatRequest
 from app.models.response_models import ChatResponse, UploadResponse
 from app.services.ai_service import generate_response
 from app.services.semantic_service import process_question
+from app.services.upload_service import process_upload
 
 router = APIRouter(prefix="/api/v1")
 logger = logging.getLogger(__name__)
@@ -38,5 +39,5 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_csv(file: Annotated[UploadFile, File(...)]) -> UploadResponse:
-    """Return an uploaded file's name without processing its contents."""
-    return UploadResponse(filename=file.filename or "")
+    """Return a preview of an uploaded CSV dataset."""
+    return await process_upload(file)

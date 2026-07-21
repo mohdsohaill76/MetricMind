@@ -47,12 +47,18 @@ def test_request_logging_includes_method_path_status_and_duration(caplog: pytest
     )
 
 
-def test_upload_returns_uploaded_filename() -> None:
-    """An uploaded file returns its original filename without processing it."""
+def test_upload_returns_dataset_preview() -> None:
+    """An uploaded CSV returns its metadata and first ten rows."""
     response = client.post(
         "/api/v1/upload",
         files={"file": ("metrics.csv", "metric,value\nrevenue,100\n", "text/csv")},
     )
 
     assert response.status_code == 200
-    assert response.json() == {"filename": "metrics.csv"}
+    assert response.json() == {
+        "filename": "metrics.csv",
+        "rows": 1,
+        "columns": 2,
+        "column_names": ["metric", "value"],
+        "preview": [{"metric": "revenue", "value": 100}],
+    }
