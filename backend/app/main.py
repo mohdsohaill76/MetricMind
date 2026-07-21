@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.routes import router
 from app.config.settings import settings
 from app.exceptions.handlers import http_exception_handler, unhandled_exception_handler
+from app.middleware.request_logging import RequestLoggingMiddleware
 
 
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +35,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(router)
 

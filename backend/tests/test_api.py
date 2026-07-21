@@ -31,3 +31,17 @@ def test_chat_rejects_invalid_questions(payload: dict[str, str]) -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "question"]
+
+
+def test_request_logging_includes_method_path_status_and_duration(caplog: pytest.LogCaptureFixture) -> None:
+    """Every HTTP request emits a completion log with request details."""
+    caplog.set_level("INFO", logger="app.middleware.request_logging")
+
+    response = client.post("/api/v1/chat", json={"question": "How is retention trending?"})
+
+    assert response.status_code == 200
+    assert any(
+        "POST /api/v1/chat -> 200 (" in record.message
+        and record.message.endswith(" ms)")
+        for record in caplog.records
+    )
