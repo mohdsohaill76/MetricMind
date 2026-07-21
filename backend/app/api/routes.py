@@ -10,7 +10,7 @@ from app.models.response_models import ChatResponse
 from app.services.ai_service import generate_response
 from app.services.semantic_service import process_question
 
-router = APIRouter()
+router = APIRouter(prefix="/api/v1")
 logger = logging.getLogger(__name__)
 
 
