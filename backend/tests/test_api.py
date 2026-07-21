@@ -62,3 +62,51 @@ def test_upload_returns_dataset_preview() -> None:
         "column_names": ["metric", "value"],
         "preview": [{"metric": "revenue", "value": 100}],
     }
+
+
+@pytest.mark.parametrize(
+    ("filename", "contents", "message"),
+    [
+        (
+            "metrics.txt",
+            "metric,value\nrevenue,100\n",
+            "Only CSV files are supported.",
+        ),
+        ("metrics.csv", "", "The uploaded CSV is empty."),
+        (
+            "metrics.csv",
+            "metric,value\nrevenue,100,unexpected\n",
+            "The uploaded file is not a valid CSV.",
+        ),
+        (
+            "metrics.csv",
+            "metric,\nrevenue,100\n",
+            "The uploaded CSV must include headers.",
+        ),
+        (
+            "metrics.csv",
+            "metric,value\n",
+            "The uploaded CSV must contain at least one data row.",
+        ),
+    ],
+    ids=[
+        "invalid-extension",
+        "empty-file",
+        "malformed-csv",
+        "blank-header",
+        "empty-dataset",
+    ],
+)
+def test_upload_rejects_invalid_csv(
+    filename: str,
+    contents: str,
+    message: str,
+) -> None:
+    """Invalid uploads use the API's standard HTTP error response."""
+    response = client.post(
+        "/api/v1/upload",
+        files={"file": (filename, contents, "text/csv")},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "HTTP Error", "message": message}
