@@ -2,10 +2,12 @@
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.routes import router
+from app.exceptions.handlers import http_exception_handler, unhandled_exception_handler
 
 
 logging.basicConfig(level=logging.INFO)
@@ -14,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="MetricMind Backend")
 """The FastAPI application instance."""
+
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.add_middleware(
     CORSMiddleware,
