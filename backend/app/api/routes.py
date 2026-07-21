@@ -1,12 +1,12 @@
 """HTTP routes for the MetricMind API."""
 
 import logging
-from typing import Dict
+from typing import Annotated, Dict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, File, UploadFile
 
 from app.models.request_models import ChatRequest
-from app.models.response_models import ChatResponse
+from app.models.response_models import ChatResponse, UploadResponse
 from app.services.ai_service import generate_response
 from app.services.semantic_service import process_question
 
@@ -34,3 +34,9 @@ async def chat(request: ChatRequest) -> ChatResponse:
     response = generate_response(processed_question)
     logger.info("Chat response generated successfully")
     return ChatResponse(response=response)
+
+
+@router.post("/upload", response_model=UploadResponse)
+async def upload_csv(file: Annotated[UploadFile, File(...)]) -> UploadResponse:
+    """Return an uploaded file's name without processing its contents."""
+    return UploadResponse(filename=file.filename or "")

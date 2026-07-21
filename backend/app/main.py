@@ -1,5 +1,7 @@
 """FastAPI application entry point for MetricMind."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 import logging
 
 from fastapi import FastAPI, HTTPException
@@ -16,7 +18,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Run application lifecycle tasks."""
+    logger.info("MetricMind backend starting...")
+    yield
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    lifespan=lifespan,
+)
 """The FastAPI application instance."""
 
 app.add_exception_handler(HTTPException, http_exception_handler)
@@ -38,9 +51,3 @@ app.add_middleware(
 app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(router)
-
-
-@app.on_event("startup")
-async def log_startup() -> None:
-    """Log application startup."""
-    logger.info("MetricMind backend starting...")

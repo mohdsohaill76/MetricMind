@@ -45,3 +45,14 @@ def test_request_logging_includes_method_path_status_and_duration(caplog: pytest
         and record.message.endswith(" ms)")
         for record in caplog.records
     )
+
+
+def test_upload_returns_uploaded_filename() -> None:
+    """An uploaded file returns its original filename without processing it."""
+    response = client.post(
+        "/api/v1/upload",
+        files={"file": ("metrics.csv", "metric,value\nrevenue,100\n", "text/csv")},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"filename": "metrics.csv"}
