@@ -2,7 +2,7 @@ import { FaLightbulb } from "react-icons/fa";
 
 export default function AIInsights() {
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-md">
+    <div className="card rounded-2xl p-6 shadow-md">
       <div className="mb-5 flex items-center gap-3">
         <FaLightbulb className="text-2xl text-yellow-500" />
 

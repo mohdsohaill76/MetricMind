@@ -14,17 +14,8 @@ export default function KPICard({
   icon,
 }: KPICardProps) {
   return (
-      <div className="
-rounded-2xl
-bg-white
-p-6
-shadow-md
-transition-all
-duration-300
-hover:-translate-y-2
-hover:shadow-xl
-cursor-pointer
-">      <div className="flex items-center justify-between">
+          <div className="card rounded-2xl p-6 shadow-md">
+     <div className="flex items-center justify-between">
 
         <div>
           <p className="text-sm text-gray-500">{title}</p>

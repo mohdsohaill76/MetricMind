@@ -48,17 +48,8 @@ export default function PerformanceChart() {
 
     return (
 
-<div className="
-rounded-2xl
-bg-white
-p-6
-shadow-md
-transition-all
-duration-300
-hover:shadow-xl
-hover:scale-[1.01]
-">
-            <h2 className="text-xl font-semibold mb-5">
+    <div className="card rounded-2xl p-6 shadow-md">
+        <h2 className="text-xl font-semibold mb-5">
 
                 Monthly Performance
 

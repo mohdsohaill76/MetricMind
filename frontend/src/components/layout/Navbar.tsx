@@ -6,13 +6,14 @@ import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
   return (
-<header className="card flex h-16 items-center justify-between border-b px-8 shadow-sm">
+    <header className="card flex h-16 items-center justify-between border-b px-8 shadow-sm">
+
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold">
           MetricMind Dashboard
         </h1>
 
-        <p className="text-sm text-gray-500">
+        <p className="text-sm opacity-70">
           AI Powered Business Analytics
         </p>
       </div>
