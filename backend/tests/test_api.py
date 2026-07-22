@@ -60,6 +60,13 @@ def test_upload_returns_dataset_preview() -> None:
 
     dataframe = pd.read_csv(StringIO(csv_contents))
     numeric_columns = dataframe.select_dtypes(include="number")
+    numeric_column_names = [str(column) for column in numeric_columns.columns]
+    categorical_column_names = [
+        str(column)
+        for column in dataframe.columns
+        if str(column) not in numeric_column_names
+    ]
+    missing_values = dataframe.isna().sum().astype(int).to_dict()
 
     assert response.status_code == 200
     assert response.json() == {
@@ -74,8 +81,16 @@ def test_upload_returns_dataset_preview() -> None:
             {"metric": "profit", "value": 10, "category": "B", "notes": "note"},
         ],
         "profile": {
-            "missing_values": dataframe.isna().sum().astype(int).to_dict(),
+            "shape": {"rows": 4, "columns": 4},
+            "missing_values": missing_values,
+            "missing_percentage": {
+                column: round((count / len(dataframe.index)) * 100, 2)
+                for column, count in missing_values.items()
+            },
             "dtypes": dataframe.dtypes.astype(str).to_dict(),
+            "numeric_columns": numeric_column_names,
+            "categorical_columns": categorical_column_names,
+            "unique_values": dataframe.nunique(dropna=True).astype(int).to_dict(),
             "duplicate_rows": int(dataframe.duplicated().sum()),
             "memory_usage_bytes": int(dataframe.memory_usage(deep=True).sum()),
             "numeric_summary": {

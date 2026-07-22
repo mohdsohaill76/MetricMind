@@ -14,8 +14,13 @@ class ChatResponse(BaseModel):
 class UploadProfile(BaseModel):
     """Dataset profiling details for an uploaded CSV."""
 
+    shape: dict[str, int]
     missing_values: dict[str, int]
+    missing_percentage: dict[str, float]
     dtypes: dict[str, str]
+    numeric_columns: list[str]
+    categorical_columns: list[str]
+    unique_values: dict[str, int]
     duplicate_rows: int
     memory_usage_bytes: int
     numeric_summary: dict[str, dict[str, float]]
