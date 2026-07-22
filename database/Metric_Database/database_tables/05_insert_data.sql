@@ -112,7 +112,7 @@ select
 
 from generate_series(1,4) as id;
 
-insert 10 salesperson records
+-- insert 10 salesperson records
 
 insert into business.dim_salesperson
 (salesperson_id, salesperson_name, department, designation, region, email)
@@ -169,19 +169,17 @@ from generate_series(1,100) as id;
 update business.dim_customer
 set email = lower(replace(customer_name,' ','') || '@gmail.com');
 
-update salesperson email records
+-- update salesperson email records
 
 update business.dim_salesperson
 set email = lower(replace(salesperson_name,' ','') || '@gmail.com');
 
-update month name records
+ -- update month name records
 
 update business.dim_date
 set month_name = to_char(full_date, 'FMMonth');
 
-update brand according to product
-
-update product complete details
+-- update product complete details
 
 update business.dim_product
 set
