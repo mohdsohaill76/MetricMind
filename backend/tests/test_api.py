@@ -1,5 +1,8 @@
 """Request-validation tests for the MetricMind API."""
 
+from io import StringIO
+
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
@@ -49,18 +52,46 @@ def test_request_logging_includes_method_path_status_and_duration(caplog: pytest
 
 def test_upload_returns_dataset_preview() -> None:
     """An uploaded CSV returns its metadata and first ten rows."""
+    csv_contents = "metric,value,category,notes\nrevenue,0,A,\nrevenue,0,A,\ncost,10,B,\nprofit,10,B,note\n"
     response = client.post(
         "/api/v1/upload",
-        files={"file": ("metrics.csv", "metric,value\nrevenue,100\n", "text/csv")},
+        files={"file": ("metrics.csv", csv_contents, "text/csv")},
     )
+
+    dataframe = pd.read_csv(StringIO(csv_contents))
+    numeric_columns = dataframe.select_dtypes(include="number")
 
     assert response.status_code == 200
     assert response.json() == {
         "filename": "metrics.csv",
-        "rows": 1,
-        "columns": 2,
-        "column_names": ["metric", "value"],
-        "preview": [{"metric": "revenue", "value": 100}],
+        "rows": 4,
+        "columns": 4,
+        "column_names": ["metric", "value", "category", "notes"],
+        "preview": [
+            {"metric": "revenue", "value": 0, "category": "A", "notes": None},
+            {"metric": "revenue", "value": 0, "category": "A", "notes": None},
+            {"metric": "cost", "value": 10, "category": "B", "notes": None},
+            {"metric": "profit", "value": 10, "category": "B", "notes": "note"},
+        ],
+        "profile": {
+            "missing_values": dataframe.isna().sum().astype(int).to_dict(),
+            "dtypes": dataframe.dtypes.astype(str).to_dict(),
+            "duplicate_rows": int(dataframe.duplicated().sum()),
+            "memory_usage_bytes": int(dataframe.memory_usage(deep=True).sum()),
+            "numeric_summary": {
+                column: {
+                    "count": float(series.count()),
+                    "mean": float(series.mean()),
+                    "std": float(series.std(ddof=0)),
+                    "min": float(series.min()),
+                    "25%": float(series.quantile(0.25)),
+                    "50%": float(series.quantile(0.5)),
+                    "75%": float(series.quantile(0.75)),
+                    "max": float(series.max()),
+                }
+                for column, series in numeric_columns.items()
+            },
+        },
     }
 
 
