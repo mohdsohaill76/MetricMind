@@ -246,7 +246,7 @@ brand = case product_id
     else 'Other'
 end;
 
-insert 100 sales records
+--insert 100 sales records
 
 insert into business.fact_sales
 (
