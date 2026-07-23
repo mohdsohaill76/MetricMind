@@ -8,11 +8,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.request_models import ChartGenerationRequest
+from app.services import dataset_service
 from app.services import chart_service
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def clear_shared_dataset() -> None:
+    """Ensure each test starts with an empty shared dataset."""
+    dataset_service.clear_dataset()
+    yield
+    dataset_service.clear_dataset()
 
 
 @pytest.fixture()
@@ -34,16 +42,6 @@ def chart_output_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     output_dir = tmp_path / "generated_charts"
     monkeypatch.setattr(chart_service, "CHARTS_DIRECTORY", output_dir)
     return output_dir
-
-
-@pytest.fixture()
-def chart_dataset_patch(
-    chart_dataset: pd.DataFrame,
-    monkeypatch: pytest.MonkeyPatch,
-) -> pd.DataFrame:
-    """Patch the chart service to use the test dataset."""
-    monkeypatch.setattr(chart_service, "CHART_DATASET", chart_dataset)
-    return chart_dataset
 
 
 def test_chat_accepts_valid_question() -> None:
@@ -144,6 +142,55 @@ def test_upload_returns_dataset_preview() -> None:
     }
 
 
+def test_upload_stores_dataset() -> None:
+    """A successful upload stores the parsed DataFrame in the shared dataset service."""
+    csv_contents = "category,sales,response_time\nA,100,1.2\nB,150,2.1\n"
+
+    response = client.post(
+        "/api/v1/upload",
+        files={"file": ("metrics.csv", csv_contents, "text/csv")},
+    )
+
+    stored_dataset = dataset_service.get_dataset()
+
+    assert response.status_code == 200
+    assert dataset_service.has_dataset() is True
+    assert stored_dataset.equals(pd.read_csv(StringIO(csv_contents)))
+    assert stored_dataset is not dataset_service.get_dataset()
+
+
+def test_multiple_uploads_replace_the_previous_dataset() -> None:
+    """Uploading a second CSV replaces the prior shared dataset."""
+    first_csv = "category,sales\nA,100\n"
+    second_csv = "category,sales\nB,200\n"
+
+    client.post(
+        "/api/v1/upload",
+        files={"file": ("first.csv", first_csv, "text/csv")},
+    )
+    client.post(
+        "/api/v1/upload",
+        files={"file": ("second.csv", second_csv, "text/csv")},
+    )
+
+    stored_dataset = dataset_service.get_dataset()
+
+    assert stored_dataset.equals(pd.read_csv(StringIO(second_csv)))
+
+
+def test_dataset_manager_stores_and_retrieves_safely() -> None:
+    """The dataset manager returns copies instead of exposing internal state."""
+    original = pd.DataFrame({"category": ["A", "B"], "sales": [10, 20]})
+
+    dataset_service.set_dataset(original)
+    retrieved = dataset_service.get_dataset()
+    retrieved.loc[0, "sales"] = 999
+
+    assert dataset_service.has_dataset() is True
+    assert dataset_service.get_dataset().loc[0, "sales"] == 10
+    assert retrieved.loc[0, "sales"] == 999
+
+
 @pytest.mark.parametrize(
     ("filename", "contents", "message"),
     [
@@ -192,11 +239,19 @@ def test_upload_rejects_invalid_csv(
     assert response.json() == {"error": "HTTP Error", "message": message}
 
 
-def test_chart_generates_valid_bar_chart(
-    chart_dataset_patch: pd.DataFrame,
-    chart_output_dir: Path,
-) -> None:
+def test_chart_generates_valid_bar_chart(chart_output_dir: Path) -> None:
     """A valid bar request generates a PNG chart and returns metadata."""
+    client.post(
+        "/api/v1/upload",
+        files={
+            "file": (
+                "metrics.csv",
+                "category,sales,response_time\nA,100,1.2\nB,150,2.1\nC,120,1.8\nD,180,3.0\n",
+                "text/csv",
+            )
+        },
+    )
+
     response = client.post(
         "/api/v1/chart",
         json={
@@ -220,11 +275,19 @@ def test_chart_generates_valid_bar_chart(
     assert chart_file.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
-def test_chart_generates_valid_histogram(
-    chart_dataset_patch: pd.DataFrame,
-    chart_output_dir: Path,
-) -> None:
+def test_chart_generates_valid_histogram(chart_output_dir: Path) -> None:
     """A valid histogram request generates a PNG chart."""
+    client.post(
+        "/api/v1/upload",
+        files={
+            "file": (
+                "metrics.csv",
+                "category,sales,response_time\nA,100,1.2\nB,150,2.1\nC,120,1.8\nD,180,3.0\n",
+                "text/csv",
+            )
+        },
+    )
+
     response = client.post(
         "/api/v1/chart",
         json={
@@ -282,19 +345,27 @@ def test_chart_generates_valid_histogram(
 def test_chart_rejects_invalid_requests(
     payload: dict[str, str],
     message: str,
-    chart_dataset_patch: pd.DataFrame,
 ) -> None:
     """Invalid chart requests use the API's standard HTTP error response."""
+    client.post(
+        "/api/v1/upload",
+        files={
+            "file": (
+                "metrics.csv",
+                "category,sales,response_time,segment\nA,100,1.2,Retail\nB,150,2.1,Retail\nC,120,1.8,SMB\nD,180,3.0,Enterprise\n",
+                "text/csv",
+            )
+        },
+    )
+
     response = client.post("/api/v1/chart", json=payload)
 
     assert response.status_code == 400
     assert response.json() == {"error": "HTTP Error", "message": message}
 
 
-def test_chart_rejects_missing_dataset(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_chart_rejects_missing_dataset() -> None:
     """The chart service returns a 400 when no dataset is available."""
-    monkeypatch.setattr(chart_service, "CHART_DATASET", None)
-
     response = client.post(
         "/api/v1/chart",
         json={
@@ -307,5 +378,5 @@ def test_chart_rejects_missing_dataset(monkeypatch: pytest.MonkeyPatch) -> None:
     assert response.status_code == 400
     assert response.json() == {
         "error": "HTTP Error",
-        "message": "Chart dataset is unavailable.",
+        "message": "No dataset has been uploaded.",
     }

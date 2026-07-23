@@ -11,6 +11,7 @@ from fastapi import HTTPException, UploadFile
 from pandas.errors import EmptyDataError, ParserError
 
 from app.models.response_models import UploadProfile, UploadResponse
+from app.services.dataset_service import set_dataset
 
 
 async def process_upload(file: UploadFile) -> UploadResponse:
@@ -47,6 +48,8 @@ def _build_upload_response(file: BinaryIO, filename: str) -> UploadResponse:
     preview: list[dict[str, Any]] = json.loads(
         dataframe.head(10).to_json(orient="records")
     )
+
+    set_dataset(dataframe)
 
     return UploadResponse(
         filename=filename,

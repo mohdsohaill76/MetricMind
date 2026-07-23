@@ -16,27 +16,18 @@ from fastapi import HTTPException
 
 from app.models.request_models import ChartGenerationRequest
 from app.models.response_models import ChartGenerationResponse
+from app.services.dataset_service import get_dataset, has_dataset
 
 
 SUPPORTED_CHART_TYPES: Final[set[str]] = {"bar", "line", "scatter", "histogram", "box"}
 CHARTS_DIRECTORY: Final[Path] = Path(__file__).resolve().parents[2] / "generated_charts"
-
-CHART_DATASET: pd.DataFrame | None = pd.DataFrame(
-    {
-        "category": ["A", "B", "C", "D"],
-        "sales": [120, 180, 150, 210],
-        "response_time": [1.2, 2.4, 1.8, 3.1],
-        "score": [7.4, 8.1, 6.9, 9.0],
-        "segment": ["Retail", "Retail", "Enterprise", "SMB"],
-    }
-)
 
 
 def generate_chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
     """Validate the request and persist a PNG chart to disk."""
     dataset = _get_chart_dataset()
     if dataset is None:
-        raise HTTPException(status_code=400, detail="Chart dataset is unavailable.")
+        raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
 
     chart_type = request.chart_type.lower()
     if chart_type not in SUPPORTED_CHART_TYPES:
@@ -72,7 +63,11 @@ def generate_chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
 
 def _get_chart_dataset() -> pd.DataFrame | None:
     """Return the dataset used for chart generation."""
-    return CHART_DATASET.copy() if CHART_DATASET is not None else None
+    if not has_dataset():
+        return None
+
+    dataset = get_dataset()
+    return dataset if not dataset.empty or list(dataset.columns) else None
 
 
 def _ensure_column_exists(dataframe: pd.DataFrame, column_name: str, label: str) -> None:
