@@ -5,9 +5,16 @@ from typing import Annotated, Dict
 
 from fastapi import APIRouter, File, UploadFile
 
-from app.models.request_models import ChatRequest
-from app.models.response_models import ChatResponse, UploadResponse
+from app.models.request_models import ChatRequest, ChartGenerationRequest
+from app.models.response_models import (
+    ChatResponse,
+    ChartGenerationResponse,
+    UploadResponse,
+)
+from app.services.chart_service import generate_chart
 from app.services.ai_service import generate_response
+from app.services.semantic_service import process_question
+from app.services.upload_service import process_upload
 from app.services.semantic_service import process_question
 from app.services.upload_service import process_upload
 
@@ -35,6 +42,12 @@ async def chat(request: ChatRequest) -> ChatResponse:
     response = generate_response(processed_question)
     logger.info("Chat response generated successfully")
     return ChatResponse(response=response)
+
+
+@router.post("/chart", response_model=ChartGenerationResponse)
+async def chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
+    """Return chart metadata for the requested chart configuration."""
+    return generate_chart(request)
 
 
 @router.post("/upload", response_model=UploadResponse)

@@ -1,15 +1,49 @@
 """Request-validation tests for the MetricMind API."""
 
 from io import StringIO
+from pathlib import Path
 
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.models.request_models import ChartGenerationRequest
+from app.services import chart_service
 
 
 client = TestClient(app)
+
+
+@pytest.fixture()
+def chart_dataset() -> pd.DataFrame:
+    """Provide a deterministic dataset for chart generation tests."""
+    return pd.DataFrame(
+        {
+            "category": ["A", "B", "C", "D"],
+            "sales": [100, 150, 120, 180],
+            "response_time": [1.2, 2.1, 1.8, 3.0],
+            "segment": ["Retail", "Retail", "SMB", "Enterprise"],
+        }
+    )
+
+
+@pytest.fixture()
+def chart_output_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Redirect chart output into a temporary directory during tests."""
+    output_dir = tmp_path / "generated_charts"
+    monkeypatch.setattr(chart_service, "CHARTS_DIRECTORY", output_dir)
+    return output_dir
+
+
+@pytest.fixture()
+def chart_dataset_patch(
+    chart_dataset: pd.DataFrame,
+    monkeypatch: pytest.MonkeyPatch,
+) -> pd.DataFrame:
+    """Patch the chart service to use the test dataset."""
+    monkeypatch.setattr(chart_service, "CHART_DATASET", chart_dataset)
+    return chart_dataset
 
 
 def test_chat_accepts_valid_question() -> None:
@@ -156,3 +190,122 @@ def test_upload_rejects_invalid_csv(
 
     assert response.status_code == 400
     assert response.json() == {"error": "HTTP Error", "message": message}
+
+
+def test_chart_generates_valid_bar_chart(
+    chart_dataset_patch: pd.DataFrame,
+    chart_output_dir: Path,
+) -> None:
+    """A valid bar request generates a PNG chart and returns metadata."""
+    response = client.post(
+        "/api/v1/chart",
+        json={
+            "chart_type": "bar",
+            "x_column": "category",
+            "y_column": "sales",
+        },
+    )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["chart_type"] == "bar"
+    assert body["message"] == "Chart generated successfully."
+    assert body["filename"].endswith(".png")
+    assert body["chart_path"].endswith(body["filename"])
+
+    chart_file = Path(body["chart_path"])
+    assert chart_file.exists()
+    assert chart_file.parent == chart_output_dir
+    assert chart_file.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_chart_generates_valid_histogram(
+    chart_dataset_patch: pd.DataFrame,
+    chart_output_dir: Path,
+) -> None:
+    """A valid histogram request generates a PNG chart."""
+    response = client.post(
+        "/api/v1/chart",
+        json={
+            "chart_type": "histogram",
+            "x_column": "response_time",
+        },
+    )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["chart_type"] == "histogram"
+    assert body["message"] == "Chart generated successfully."
+    assert Path(body["chart_path"]).exists()
+    assert Path(body["chart_path"]).parent == chart_output_dir
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        (
+            {"chart_type": "pie", "x_column": "category", "y_column": "sales"},
+            "Unsupported chart type.",
+        ),
+        (
+            {"chart_type": "bar", "y_column": "sales"},
+            "The x column is required.",
+        ),
+        (
+            {"chart_type": "bar", "x_column": "category"},
+            "The y column is required for this chart type.",
+        ),
+        (
+            {"chart_type": "bar", "x_column": "missing", "y_column": "sales"},
+            "The requested x column does not exist.",
+        ),
+        (
+            {"chart_type": "histogram", "x_column": "category"},
+            "The requested x column must be numeric.",
+        ),
+        (
+            {"chart_type": "scatter", "x_column": "response_time", "y_column": "segment"},
+            "The requested y column must be numeric.",
+        ),
+    ],
+    ids=[
+        "invalid-chart-type",
+        "missing-x-column",
+        "missing-y-column",
+        "missing-x-field",
+        "non-numeric-histogram-column",
+        "non-numeric-scatter-y-column",
+    ],
+)
+def test_chart_rejects_invalid_requests(
+    payload: dict[str, str],
+    message: str,
+    chart_dataset_patch: pd.DataFrame,
+) -> None:
+    """Invalid chart requests use the API's standard HTTP error response."""
+    response = client.post("/api/v1/chart", json=payload)
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "HTTP Error", "message": message}
+
+
+def test_chart_rejects_missing_dataset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The chart service returns a 400 when no dataset is available."""
+    monkeypatch.setattr(chart_service, "CHART_DATASET", None)
+
+    response = client.post(
+        "/api/v1/chart",
+        json={
+            "chart_type": "bar",
+            "x_column": "category",
+            "y_column": "sales",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": "HTTP Error",
+        "message": "Chart dataset is unavailable.",
+    }

@@ -11,6 +11,15 @@ class ChatResponse(BaseModel):
     response: str
 
 
+class ChartGenerationResponse(BaseModel):
+    """Response payload for chart generation."""
+
+    chart_type: str
+    filename: str
+    chart_path: str
+    message: str
+
+
 class UploadProfile(BaseModel):
     """Dataset profiling details for an uploaded CSV."""
 
