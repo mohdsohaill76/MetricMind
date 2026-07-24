@@ -383,6 +383,50 @@ def test_chart_rejects_missing_dataset() -> None:
     }
 
 
+def test_dashboard_summary_returns_dataset_overview() -> None:
+    """The dashboard summary endpoint returns a high-level view of the uploaded dataset."""
+    csv_contents = (
+        "category,sales,response_time,segment\n"
+        "A,100,1.2,Retail\n"
+        "B,150,2.1,Retail\n"
+        "B,150,2.1,Retail\n"
+        "C,180,3.0,Enterprise\n"
+    )
+
+    client.post(
+        "/api/v1/upload",
+        files={"file": ("metrics.csv", csv_contents, "text/csv")},
+    )
+
+    response = client.get("/api/v1/dashboard/summary")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["total_rows"] == 4
+    assert body["total_columns"] == 4
+    assert body["numeric_columns_count"] == 2
+    assert body["categorical_columns_count"] == 2
+    assert body["duplicate_rows"] == 1
+    assert body["missing_values_total"] == 0
+    assert body["upload_status"] == "uploaded"
+    assert body["dataset_quality"] == (
+        "Dataset quality is acceptable, but several data-quality checks should be reviewed."
+    )
+    assert body["available_charts"] == ["histogram", "box", "bar", "line", "scatter"]
+    assert "generated_at" in body
+
+
+def test_dashboard_summary_rejects_missing_dataset() -> None:
+    """The dashboard summary endpoint returns a 400 when no dataset is available."""
+    response = client.get("/api/v1/dashboard/summary")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": "HTTP Error",
+        "message": "No dataset has been uploaded.",
+    }
+
+
 def test_generate_report_returns_dataset_insights() -> None:
     """A populated dataset returns a structured AI report payload."""
     csv_contents = (

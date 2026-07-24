@@ -117,3 +117,39 @@ class ReportGenerationResponse(BaseModel):
     recommendations: list[str]
     charts_available: list[str]
     status: str
+
+
+class DashboardSummaryResponse(BaseModel):
+    """Response payload containing a high-level dataset dashboard summary."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "total_rows": 120,
+                    "total_columns": 8,
+                    "numeric_columns_count": 3,
+                    "categorical_columns_count": 5,
+                    "duplicate_rows": 2,
+                    "missing_values_total": 4,
+                    "memory_usage_bytes": 8192,
+                    "dataset_quality": "Dataset quality is good with limited missing data and no duplicate rows.",
+                    "upload_status": "uploaded",
+                    "available_charts": ["histogram", "box", "bar", "line", "scatter"],
+                    "generated_at": "2026-07-24T12:00:00Z",
+                }
+            ]
+        }
+    )
+
+    total_rows: int
+    total_columns: int
+    numeric_columns_count: int
+    categorical_columns_count: int
+    duplicate_rows: int
+    missing_values_total: int
+    memory_usage_bytes: int
+    dataset_quality: str
+    upload_status: str
+    available_charts: list[str]
+    generated_at: datetime
