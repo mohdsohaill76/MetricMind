@@ -153,3 +153,84 @@ class DashboardSummaryResponse(BaseModel):
     upload_status: str
     available_charts: list[str]
     generated_at: datetime
+
+
+class NumericColumnAnalytics(BaseModel):
+    """Numeric-column analytics for the dataset summary endpoint."""
+
+    count: float
+    mean: float
+    median: float
+    standard_deviation: float
+    minimum: float
+    maximum: float
+    first_quartile: float
+    third_quartile: float
+
+
+class CategoricalColumnAnalytics(BaseModel):
+    """Categorical-column analytics for the dataset summary endpoint."""
+
+    unique_values: int
+    most_frequent_value: str | int | float | None
+    frequency: int
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    """Response payload for the analytics summary endpoint."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "total_rows": 120,
+                    "total_columns": 8,
+                    "numeric_columns": ["sales", "margin"],
+                    "categorical_columns": ["region", "segment"],
+                    "total_missing_values": 4,
+                    "duplicate_rows": 2,
+                    "memory_usage_bytes": 8192,
+                    "dataset_quality": "Dataset quality is good with limited missing data and no duplicate rows.",
+                    "available_charts": ["histogram", "box", "bar", "line", "scatter"],
+                    "generated_at": "2026-07-24T12:00:00Z",
+                    "dataset_insights": [
+                        "Dataset contains 120 rows and 8 columns.",
+                        "Missing values are low and unlikely to materially affect most analyses.",
+                    ],
+                    "numeric_analysis": {
+                        "sales": {
+                            "count": 120.0,
+                            "mean": 245.5,
+                            "median": 240.0,
+                            "standard_deviation": 54.2,
+                            "minimum": 120.0,
+                            "maximum": 410.0,
+                            "first_quartile": 200.0,
+                            "third_quartile": 290.0,
+                        }
+                    },
+                    "categorical_analysis": {
+                        "region": {
+                            "unique_values": 4,
+                            "most_frequent_value": "North",
+                            "frequency": 48,
+                        }
+                    },
+                }
+            ]
+        }
+    )
+
+    total_rows: int
+    total_columns: int
+    numeric_columns: list[str]
+    categorical_columns: list[str]
+    total_missing_values: int
+    duplicate_rows: int
+    memory_usage_bytes: int
+    dataset_quality: str
+    available_charts: list[str]
+    generated_at: datetime
+    dataset_insights: list[str]
+    numeric_analysis: dict[str, NumericColumnAnalytics]
+    categorical_analysis: dict[str, CategoricalColumnAnalytics]

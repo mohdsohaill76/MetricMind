@@ -427,6 +427,64 @@ def test_dashboard_summary_rejects_missing_dataset() -> None:
     }
 
 
+def test_analytics_summary_returns_detailed_analysis() -> None:
+    """The analytics summary endpoint returns detailed column analysis for the uploaded dataset."""
+    csv_contents = (
+        "category,sales,response_time,segment\n"
+        "A,100,1.2,Retail\n"
+        "B,150,2.1,Retail\n"
+        "B,150,2.1,Retail\n"
+        "C,180,3.0,Enterprise\n"
+    )
+
+    client.post(
+        "/api/v1/upload",
+        files={"file": ("metrics.csv", csv_contents, "text/csv")},
+    )
+
+    response = client.get("/api/v1/analytics/summary")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["total_rows"] == 4
+    assert body["total_columns"] == 4
+    assert body["numeric_columns"] == ["sales", "response_time"]
+    assert body["categorical_columns"] == ["category", "segment"]
+    assert body["total_missing_values"] == 0
+    assert body["duplicate_rows"] == 1
+    assert body["dataset_quality"] == (
+        "Dataset quality is acceptable, but several data-quality checks should be reviewed."
+    )
+    assert body["available_charts"] == ["histogram", "box", "bar", "line", "scatter"]
+    assert "generated_at" in body
+    assert body["numeric_analysis"]["sales"] == {
+        "count": 4.0,
+        "mean": 145.0,
+        "median": 150.0,
+        "standard_deviation": 28.722813232690143,
+        "minimum": 100.0,
+        "maximum": 180.0,
+        "first_quartile": 137.5,
+        "third_quartile": 157.5,
+    }
+    assert body["categorical_analysis"]["category"] == {
+        "unique_values": 3,
+        "most_frequent_value": "B",
+        "frequency": 2,
+    }
+
+
+def test_analytics_summary_rejects_missing_dataset() -> None:
+    """The analytics summary endpoint returns a 400 when no dataset is available."""
+    response = client.get("/api/v1/analytics/summary")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": "HTTP Error",
+        "message": "No dataset has been uploaded.",
+    }
+
+
 def test_generate_report_returns_dataset_insights() -> None:
     """A populated dataset returns a structured AI report payload."""
     csv_contents = (

@@ -11,12 +11,14 @@ from app.models.request_models import (
     ReportGenerationRequest,
 )
 from app.models.response_models import (
+    AnalyticsSummaryResponse,
     ChatResponse,
     ChartGenerationResponse,
     DashboardSummaryResponse,
     ReportGenerationResponse,
     UploadResponse,
 )
+from app.services.analytics_service import generate_analytics_summary
 from app.services.chart_service import generate_chart
 from app.services.ai_service import generate_response
 from app.services.dashboard_service import generate_dashboard_summary
@@ -68,6 +70,20 @@ async def chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
 async def dashboard_summary() -> DashboardSummaryResponse:
     """Return the current dashboard summary for the uploaded dataset."""
     return generate_dashboard_summary()
+
+
+@router.get(
+    "/analytics/summary",
+    response_model=AnalyticsSummaryResponse,
+    summary="Get an analytics summary for the uploaded dataset",
+    description=(
+        "Return analytical information for the currently uploaded dataset using the shared "
+        "dataset service and existing profiling logic."
+    ),
+)
+async def analytics_summary() -> AnalyticsSummaryResponse:
+    """Return the current analytics summary for the uploaded dataset."""
+    return generate_analytics_summary()
 
 
 @router.post(
