@@ -7,6 +7,7 @@ import {
   FaChartPie,
   FaChartLine,
   FaRobot,
+  FaComments,
   FaFileAlt,
   FaUser,
   FaCog,
@@ -25,6 +26,11 @@ export default function Sidebar() {
       name: "Analytics",
       href: "/analytics",
       icon: <FaChartLine />,
+    },
+    {
+      name: "AI Chat",
+      href: "/ai-chat",
+      icon: <FaComments />,
     },
     {
       name: "AI Generator",
@@ -75,9 +81,13 @@ export default function Sidebar() {
                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
             }`}
           >
-            <span className="text-lg">{item.icon}</span>
+            <span className="text-lg">
+              {item.icon}
+            </span>
 
-            <span>{item.name}</span>
+            <span>
+              {item.name}
+            </span>
           </Link>
         ))}
 

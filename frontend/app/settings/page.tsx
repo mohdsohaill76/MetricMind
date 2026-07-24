@@ -1,379 +1,422 @@
 "use client";
 
 import { useState } from "react";
-
 import Navbar from "../../src/components/layout/Navbar";
 import Sidebar from "../../src/components/layout/Sidebar";
 
 import {
+  FaUser,
+  FaEnvelope,
   FaMoon,
   FaBell,
   FaLock,
-  FaUser,
-  FaEnvelope,
-  FaFloppyDisk,
-} from "react-icons/fa6";
+  FaShieldAlt,
+  FaSave,
+  FaChevronRight,
+} from "react-icons/fa";
 
 export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [dashboardNotifications, setDashboardNotifications] = useState(true);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("Admin");
+  const [email, setEmail] = useState("admin@metricmind.com");
 
-  const handleSaveSettings = () => {
-    alert("Settings saved successfully!");
+  const handleSaveProfile = () => {
+    alert("Profile saved successfully!");
   };
 
-  const handlePasswordChange = () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      alert("Please fill in all password fields.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      alert("New password and confirm password do not match.");
-      return;
-    }
-
-    alert("Password update will be connected to the backend later.");
-
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+  const handleChangePassword = () => {
+    alert("Password functionality will be connected to the backend.");
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-slate-100">
 
       {/* Sidebar */}
       <Sidebar />
 
-      <div className="flex-1">
+      {/* Main Area */}
+      <div className="flex min-w-0 flex-1 flex-col">
 
-        {/* Navbar */}
         <Navbar />
 
-        <main className="min-h-screen bg-slate-100 p-8">
+        <main className="flex-1 p-5 sm:p-7 lg:p-10">
 
-          {/* Page Header */}
-          <div className="mb-8">
+          {/* ================= HEADER ================= */}
 
-            <h1 className="text-4xl font-bold text-slate-800">
-              Settings
-            </h1>
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 
-            <p className="mt-2 text-gray-600">
-              Customize your MetricMind experience and manage your account.
-            </p>
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-sm text-blue-600">
+                <span>Dashboard</span>
+                <FaChevronRight className="text-xs" />
+                <span className="text-slate-400">Settings</span>
+              </div>
+
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Settings
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+                Manage your profile, preferences, notifications, and account
+                security from one place.
+              </p>
+            </div>
+
+            {/* Status */}
+            <div className="flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Account Active
+            </div>
 
           </div>
 
 
-          {/* Profile Settings */}
-          <div className="rounded-2xl bg-white p-6 shadow-md">
+          {/* ================= PROFILE ================= */}
 
-            <div className="flex items-center gap-3">
+          <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-              <FaUser className="text-2xl text-blue-600" />
+            {/* Section Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
 
-              <div>
-                <h2 className="text-xl font-semibold">
-                  Profile Information
-                </h2>
+              <div className="flex items-center gap-4">
 
-                <p className="mt-1 text-sm text-gray-500">
-                  Manage your personal information.
-                </p>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-lg text-white shadow-sm">
+                  <FaUser />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Profile Information
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Update your personal account information.
+                  </p>
+                </div>
+
               </div>
+
+              <span className="hidden rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 sm:block">
+                Account
+              </span>
 
             </div>
 
 
-            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Content */}
+            <div className="p-6">
 
-              <div>
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-                <label className="mb-2 block font-medium">
-                  Full Name
-                </label>
+                {/* Full Name */}
+                <div>
 
-                <input
-                  type="text"
-                  defaultValue="Admin"
-                  className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-
-              </div>
-
-
-              <div>
-
-                <label className="mb-2 block font-medium">
-                  Email Address
-                </label>
-
-                <div className="relative">
-
-                  <FaEnvelope className="absolute left-4 top-4 text-gray-400" />
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Full Name
+                  </label>
 
                   <input
-                    type="email"
-                    defaultValue="admin@metricmind.com"
-                    className="w-full rounded-xl border px-4 py-3 pl-11 outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                   />
 
                 </div>
 
-              </div>
 
-            </div>
-
-          </div>
-
-
-          {/* Theme Settings */}
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow-md">
-
-            <div className="flex items-center gap-3">
-
-              <FaMoon className="text-2xl text-blue-600" />
-
-              <div>
-
-                <h2 className="text-xl font-semibold">
-                  Appearance
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Change the appearance of your MetricMind dashboard.
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div className="mt-6 flex items-center justify-between rounded-xl border p-4">
-
-              <div>
-
-                <p className="font-medium">
-                  Dark Mode
-                </p>
-
-                <p className="text-sm text-gray-500">
-                  Switch between light and dark themes.
-                </p>
-
-              </div>
-
-              <button
-                onClick={() => {
-                  document
-                    .querySelector("button[aria-label='theme-toggle']")
-                    ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-                }}
-                aria-label="theme-toggle"
-                className="rounded-xl bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700"
-              >
-                Toggle Theme
-              </button>
-
-            </div>
-
-          </div>
-
-
-          {/* Notification Settings */}
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow-md">
-
-            <div className="flex items-center gap-3">
-
-              <FaBell className="text-2xl text-blue-600" />
-
-              <div>
-
-                <h2 className="text-xl font-semibold">
-                  Notifications
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Manage your email and dashboard notifications.
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div className="mt-6 space-y-5">
-
-              {/* Email Notifications */}
-              <div className="flex items-center justify-between">
-
+                {/* Email */}
                 <div>
 
-                  <p className="font-medium">
-                    Email Notifications
-                  </p>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Email Address
+                  </label>
 
-                  <p className="text-sm text-gray-500">
-                    Receive important updates through email.
-                  </p>
+                  <div className="relative">
+
+                    <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                    />
+
+                  </div>
 
                 </div>
 
-                <button
-                  onClick={() =>
-                    setEmailNotifications(!emailNotifications)
-                  }
-                  className={`relative h-6 w-11 rounded-full transition ${
-                    emailNotifications
-                      ? "bg-blue-600"
-                      : "bg-gray-300"
-                  }`}
-                >
+              </div>
 
-                  <span
-                    className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
+
+              <div className="mt-6 flex justify-end">
+
+                <button
+                  onClick={handleSaveProfile}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
+                >
+                  <FaSave />
+                  Save Changes
+                </button>
+
+              </div>
+
+            </div>
+
+          </section>
+
+
+          {/* ================= TWO COLUMN SETTINGS ================= */}
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+
+
+            {/* ================= APPEARANCE ================= */}
+
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+              <div className="border-b border-slate-100 px-6 py-5">
+
+                <div className="flex items-center gap-4">
+
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                    <FaMoon />
+                  </div>
+
+                  <div>
+                    <h2 className="font-semibold text-slate-900">
+                      Appearance
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Customize your dashboard theme.
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div className="p-6">
+
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-5">
+
+                  <div>
+
+                    <h3 className="font-semibold text-slate-800">
+                      Dark Mode
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Switch between light and dark themes.
+                    </p>
+
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      document.documentElement.classList.toggle("dark");
+                    }}
+                    className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  >
+                    Toggle
+                  </button>
+
+                </div>
+
+              </div>
+
+            </section>
+
+
+            {/* ================= SECURITY ================= */}
+
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+              <div className="border-b border-slate-100 px-6 py-5">
+
+                <div className="flex items-center gap-4">
+
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <FaShieldAlt />
+                  </div>
+
+                  <div>
+                    <h2 className="font-semibold text-slate-900">
+                      Security
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Protect your account and manage access.
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div className="p-6">
+
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-5">
+
+                  <div className="flex items-center gap-4">
+
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
+                      <FaLock />
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-slate-800">
+                        Password
+                      </h3>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Keep your account secure.
+                      </p>
+                    </div>
+
+                  </div>
+
+                  <button
+                    onClick={handleChangePassword}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-500 hover:text-blue-600"
+                  >
+                    Change
+                  </button>
+
+                </div>
+
+              </div>
+
+            </section>
+
+
+            {/* ================= NOTIFICATIONS ================= */}
+
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
+
+              <div className="border-b border-slate-100 px-6 py-5">
+
+                <div className="flex items-center gap-4">
+
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+                    <FaBell />
+                  </div>
+
+                  <div>
+                    <h2 className="font-semibold text-slate-900">
+                      Notifications
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Control how MetricMind keeps you informed.
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div className="grid grid-cols-1 gap-4 p-6 lg:grid-cols-2">
+
+                {/* Email Notification */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-5">
+
+                  <div>
+
+                    <h3 className="font-semibold text-slate-800">
+                      Email Notifications
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Receive important updates through email.
+                    </p>
+
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setEmailNotifications(!emailNotifications)
+                    }
+                    className={`relative h-7 w-12 rounded-full transition ${
                       emailNotifications
-                        ? "left-6"
-                        : "left-1"
+                        ? "bg-blue-600"
+                        : "bg-slate-300"
                     }`}
-                  />
+                  >
 
-                </button>
+                    <span
+                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${
+                        emailNotifications
+                          ? "left-6"
+                          : "left-1"
+                      }`}
+                    />
 
-              </div>
-
-
-              {/* Dashboard Notifications */}
-              <div className="flex items-center justify-between">
-
-                <div>
-
-                  <p className="font-medium">
-                    Dashboard Notifications
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    Show notifications inside the dashboard.
-                  </p>
+                  </button>
 
                 </div>
 
-                <button
-                  onClick={() =>
-                    setDashboardNotifications(
-                      !dashboardNotifications
-                    )
-                  }
-                  className={`relative h-6 w-11 rounded-full transition ${
-                    dashboardNotifications
-                      ? "bg-blue-600"
-                      : "bg-gray-300"
-                  }`}
-                >
 
-                  <span
-                    className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
+                {/* Dashboard Notification */}
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-5">
+
+                  <div>
+
+                    <h3 className="font-semibold text-slate-800">
+                      Dashboard Notifications
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Show important alerts inside your dashboard.
+                    </p>
+
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setDashboardNotifications(
+                        !dashboardNotifications
+                      )
+                    }
+                    className={`relative h-7 w-12 rounded-full transition ${
                       dashboardNotifications
-                        ? "left-6"
-                        : "left-1"
+                        ? "bg-blue-600"
+                        : "bg-slate-300"
                     }`}
-                  />
+                  >
 
-                </button>
+                    <span
+                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${
+                        dashboardNotifications
+                          ? "left-6"
+                          : "left-1"
+                      }`}
+                    />
+
+                  </button>
+
+                </div>
 
               </div>
 
-            </div>
+            </section>
 
           </div>
 
 
-          {/* Security Settings */}
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow-md">
+          {/* ================= FOOTER NOTE ================= */}
 
-            <div className="flex items-center gap-3">
+          <div className="mt-6 flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/60 p-4 text-center text-sm text-slate-500">
 
-              <FaLock className="text-2xl text-blue-600" />
-
-              <div>
-
-                <h2 className="text-xl font-semibold">
-                  Security
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Change your password and manage account security.
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
-
-              <input
-                type="password"
-                placeholder="Current Password"
-                value={currentPassword}
-                onChange={(e) =>
-                  setCurrentPassword(e.target.value)
-                }
-                className="rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="password"
-                placeholder="New Password"
-                value={newPassword}
-                onChange={(e) =>
-                  setNewPassword(e.target.value)
-                }
-                className="rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="password"
-                placeholder="Confirm New Password"
-                value={confirmPassword}
-                onChange={(e) =>
-                  setConfirmPassword(e.target.value)
-                }
-                className="rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-            </div>
-
-
-            <button
-              onClick={handlePasswordChange}
-              className="mt-5 rounded-xl bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
-            >
-              Update Password
-            </button>
-
-          </div>
-
-
-          {/* Save Settings */}
-          <div className="mt-6 flex justify-end">
-
-            <button
-              onClick={handleSaveSettings}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700"
-            >
-
-              <FaFloppyDisk />
-
-              Save Settings
-
-            </button>
+            Your settings will be securely synchronized with your MetricMind
+            account once the backend API is connected.
 
           </div>
 
