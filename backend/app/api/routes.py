@@ -5,16 +5,20 @@ from typing import Annotated, Dict
 
 from fastapi import APIRouter, File, UploadFile
 
-from app.models.request_models import ChatRequest, ChartGenerationRequest
+from app.models.request_models import (
+    ChatRequest,
+    ChartGenerationRequest,
+    ReportGenerationRequest,
+)
 from app.models.response_models import (
     ChatResponse,
     ChartGenerationResponse,
+    ReportGenerationResponse,
     UploadResponse,
 )
 from app.services.chart_service import generate_chart
 from app.services.ai_service import generate_response
-from app.services.semantic_service import process_question
-from app.services.upload_service import process_upload
+from app.services.report_service import generate_report
 from app.services.semantic_service import process_question
 from app.services.upload_service import process_upload
 
@@ -48,6 +52,22 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
     """Return chart metadata for the requested chart configuration."""
     return generate_chart(request)
+
+
+@router.post(
+    "/ai/generate-report",
+    response_model=ReportGenerationResponse,
+    summary="Generate a business report from the uploaded dataset",
+    description=(
+        "Build a deterministic, structured business report from the shared dataset. "
+        "This endpoint does not call an external AI service yet."
+    ),
+)
+async def generate_ai_report(
+    request: ReportGenerationRequest | None = None,
+) -> ReportGenerationResponse:
+    """Return a structured report derived from the uploaded dataset."""
+    return generate_report(request)
 
 
 @router.post("/upload", response_model=UploadResponse)

@@ -60,3 +60,23 @@ class ChartGenerationRequest(BaseModel):
         description="The column to use for the y-axis when required by the chart type.",
         examples=["sales"],
     )
+
+
+class ReportGenerationRequest(BaseModel):
+    """Optional request payload for AI report generation."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"report_focus": "sales performance and data quality"}
+            ]
+        }
+    )
+
+    report_focus: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=200,
+        description="Optional focus area to guide future report-generation logic.",
+        examples=["sales performance and data quality"],
+    )

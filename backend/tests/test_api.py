@@ -2,6 +2,7 @@
 
 from io import StringIO
 from pathlib import Path
+from collections.abc import Generator
 
 import pandas as pd
 import pytest
@@ -16,7 +17,7 @@ client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def clear_shared_dataset() -> None:
+def clear_shared_dataset() -> Generator[None, None, None]:
     """Ensure each test starts with an empty shared dataset."""
     dataset_service.clear_dataset()
     yield
@@ -374,6 +375,50 @@ def test_chart_rejects_missing_dataset() -> None:
             "y_column": "sales",
         },
     )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": "HTTP Error",
+        "message": "No dataset has been uploaded.",
+    }
+
+
+def test_generate_report_returns_dataset_insights() -> None:
+    """A populated dataset returns a structured AI report payload."""
+    csv_contents = (
+        "region,sales,margin,notes\n"
+        "North,100,0.20,\n"
+        "North,100,0.20,\n"
+        "South,150,0.35,Stable\n"
+        "West,200,0.40,\n"
+    )
+
+    client.post(
+        "/api/v1/upload",
+        files={"file": ("metrics.csv", csv_contents, "text/csv")},
+    )
+
+    response = client.post("/api/v1/ai/generate-report")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["report_id"].startswith("report-")
+    assert body["status"] == "completed"
+    assert body["dataset_summary"]["shape"] == {"rows": 4, "columns": 4}
+    assert body["dataset_summary"]["duplicate_rows"] == 1
+    assert body["dataset_summary"]["numeric_columns"] == ["sales", "margin"]
+    assert body["dataset_summary"]["categorical_columns"] == ["region", "notes"]
+    assert "Dataset contains 4 rows and 4 columns." in body["key_insights"]
+    assert any(
+        insight.startswith("Duplicate rows were detected") for insight in body["key_insights"]
+    )
+    assert body["charts_available"] == ["histogram", "box", "bar", "line", "scatter"]
+    assert any("duplicate rows" in recommendation.lower() for recommendation in body["recommendations"])
+
+
+def test_generate_report_rejects_missing_dataset() -> None:
+    """The report service returns a 400 when no dataset is available."""
+    response = client.post("/api/v1/ai/generate-report")
 
     assert response.status_code == 400
     assert response.json() == {
