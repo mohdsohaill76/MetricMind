@@ -54,11 +54,11 @@ def generate_chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
     _render_chart(dataset, chart_type, request.x_column, request.y_column, chart_path)
 
     return ChartGenerationResponse(
-        chart_type=chart_type,
-        filename=filename,
-        chart_path=str(chart_path),
-        message="Chart generated successfully.",
-    )
+    chart_type=chart_type,
+    filename=filename,
+    chart_path=f"/generated_charts/{filename}",
+    message="Chart generated successfully.",
+)
 
 
 def _get_chart_dataset() -> pd.DataFrame | None:
