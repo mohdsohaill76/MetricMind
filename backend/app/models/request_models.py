@@ -1,6 +1,6 @@
 """Pydantic models for API request payloads."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ChatRequest(BaseModel):
@@ -80,3 +80,18 @@ class ReportGenerationRequest(BaseModel):
         description="Optional focus area to guide future report-generation logic.",
         examples=["sales performance and data quality"],
     )
+
+
+class UserRegistrationRequest(BaseModel):
+    """Request payload for creating a MetricMind user."""
+
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+
+
+class UserLoginRequest(BaseModel):
+    """Request payload for authenticating a MetricMind user."""
+
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., min_length=1, max_length=128)

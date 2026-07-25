@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "MetricMind Backend"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

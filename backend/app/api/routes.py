@@ -3,12 +3,15 @@
 import logging
 from typing import Annotated, Dict
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.models.request_models import (
     ChatRequest,
     ChartGenerationRequest,
     ReportGenerationRequest,
+    UserLoginRequest,
+    UserRegistrationRequest,
 )
 from app.models.response_models import (
     AnalyticsSummaryResponse,
@@ -18,19 +21,25 @@ from app.models.response_models import (
     ReportGenerationResponse,
     ReportResponse,
     ReportsListResponse,
+    RegistrationResponse,
+    TokenResponse,
     UploadResponse,
+    UserResponse,
 )
+from app.services.ai_service import generate_response
 from app.services.analytics_service import generate_analytics_summary
 from app.services.chart_service import generate_chart
-from app.services.ai_service import generate_response
 from app.services.dashboard_service import generate_dashboard_summary
+from app.services.jwt_service import create_access_token, verify_access_token
 from app.services.report_service import generate_report
 from app.services.report_storage_service import get_all_report_metadata, get_report
 from app.services.semantic_service import process_question
 from app.services.upload_service import process_upload
+from app.services.user_service import authenticate_user, get_user, register_user
 
 router = APIRouter(prefix="/api/v1")
 logger = logging.getLogger(__name__)
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @router.get("/", response_model=Dict[str, str])
@@ -132,6 +141,61 @@ async def get_stored_report(report_id: str) -> ReportResponse:
         raise HTTPException(status_code=404, detail="Report not found.")
 
     return ReportResponse.model_validate(report)
+
+
+@router.post(
+    "/auth/register",
+    response_model=RegistrationResponse,
+    status_code=201,
+    summary="Register a new user",
+)
+async def register(request: UserRegistrationRequest) -> RegistrationResponse:
+    """Register a user in the in-memory user store."""
+    user = register_user(request)
+    return RegistrationResponse(message="User registered successfully.", user=user)
+
+
+@router.post(
+    "/auth/login",
+    response_model=TokenResponse,
+    summary="Authenticate and receive an access token",
+)
+async def login(request: UserLoginRequest) -> TokenResponse:
+    """Validate credentials and issue a JWT bearer access token."""
+    user = authenticate_user(request.username, request.password)
+    return TokenResponse(
+        access_token=create_access_token(user.username),
+        token_type="bearer",
+    )
+
+
+@router.get(
+    "/auth/me",
+    response_model=UserResponse,
+    summary="Get the authenticated user",
+)
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> UserResponse:
+    """Return the user represented by a valid bearer token."""
+    if credentials is None:
+        raise _credentials_exception()
+
+    username = verify_access_token(credentials.credentials)
+    user = get_user(username)
+    if user is None:
+        raise _credentials_exception()
+
+    return user
+
+
+def _credentials_exception() -> HTTPException:
+    """Build the standard unauthenticated response."""
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @router.post("/upload", response_model=UploadResponse)

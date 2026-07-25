@@ -139,6 +139,27 @@ class ReportResponse(ReportGenerationResponse):
     """Response payload containing a complete stored report."""
 
 
+class UserResponse(BaseModel):
+    """Public user details returned by authentication endpoints."""
+
+    username: str
+    email: str
+
+
+class RegistrationResponse(BaseModel):
+    """Response payload returned after successful user registration."""
+
+    message: str
+    user: UserResponse
+
+
+class TokenResponse(BaseModel):
+    """Bearer access token returned after successful authentication."""
+
+    access_token: str
+    token_type: str
+
+
 class DashboardSummaryResponse(BaseModel):
     """Response payload containing a high-level dataset dashboard summary."""
 
