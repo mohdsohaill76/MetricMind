@@ -119,6 +119,26 @@ class ReportGenerationResponse(BaseModel):
     status: str
 
 
+class ReportMetadata(BaseModel):
+    """Lightweight metadata describing a generated report."""
+
+    report_id: str
+    generated_at: datetime
+    status: str
+    dataset_quality: str
+
+
+class ReportsListResponse(BaseModel):
+    """Response payload containing all generated report metadata."""
+
+    count: int
+    reports: list[ReportMetadata]
+
+
+class ReportResponse(ReportGenerationResponse):
+    """Response payload containing a complete stored report."""
+
+
 class DashboardSummaryResponse(BaseModel):
     """Response payload containing a high-level dataset dashboard summary."""
 

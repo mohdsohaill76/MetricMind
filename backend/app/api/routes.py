@@ -3,7 +3,7 @@
 import logging
 from typing import Annotated, Dict
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.models.request_models import (
     ChatRequest,
@@ -16,6 +16,8 @@ from app.models.response_models import (
     ChartGenerationResponse,
     DashboardSummaryResponse,
     ReportGenerationResponse,
+    ReportResponse,
+    ReportsListResponse,
     UploadResponse,
 )
 from app.services.analytics_service import generate_analytics_summary
@@ -23,6 +25,7 @@ from app.services.chart_service import generate_chart
 from app.services.ai_service import generate_response
 from app.services.dashboard_service import generate_dashboard_summary
 from app.services.report_service import generate_report
+from app.services.report_storage_service import get_all_report_metadata, get_report
 from app.services.semantic_service import process_question
 from app.services.upload_service import process_upload
 
@@ -100,6 +103,35 @@ async def generate_ai_report(
 ) -> ReportGenerationResponse:
     """Return a structured report derived from the uploaded dataset."""
     return generate_report(request)
+
+
+@router.get(
+    "/reports",
+    response_model=ReportsListResponse,
+    summary="List generated reports",
+    description=(
+        "Return lightweight metadata for all reports generated during this application run."
+    ),
+)
+async def list_reports() -> ReportsListResponse:
+    """Return metadata for all stored reports."""
+    metadata = get_all_report_metadata()
+    return ReportsListResponse(count=len(metadata), reports=metadata)
+
+
+@router.get(
+    "/reports/{report_id}",
+    response_model=ReportResponse,
+    summary="Get a generated report",
+    description="Return the complete report for the requested report identifier.",
+)
+async def get_stored_report(report_id: str) -> ReportResponse:
+    """Return one complete stored report."""
+    report = get_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    return ReportResponse.model_validate(report)
 
 
 @router.post("/upload", response_model=UploadResponse)

@@ -15,6 +15,7 @@ from app.models.response_models import (
     ReportGenerationResponse,
 )
 from app.services.dataset_service import get_dataset, has_dataset
+from app.services.report_storage_service import save_report
 
 
 SUPPORTED_CHART_TYPES: Final[list[str]] = ["histogram", "box", "bar", "line", "scatter"]
@@ -28,11 +29,11 @@ def generate_report(
     if dataset is None:
         raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
 
-    dataset_summary = _build_dataset_summary(dataset)
+    dataset_summary, dataset_quality = _build_report_dataset_details(dataset)
     key_insights = _build_key_insights(dataset_summary, request)
     recommendations = _build_recommendations(dataset_summary)
 
-    return ReportGenerationResponse(
+    report = ReportGenerationResponse(
         report_id=_build_report_id(dataset),
         generated_at=datetime.now(UTC),
         dataset_summary=dataset_summary,
@@ -41,6 +42,10 @@ def generate_report(
         charts_available=_build_available_charts(dataset_summary),
         status="completed",
     )
+    stored_report = report.model_dump(mode="json")
+    stored_report["dataset_quality"] = dataset_quality
+    save_report(stored_report)
+    return report
 
 
 def _get_report_dataset() -> pd.DataFrame | None:
@@ -54,6 +59,14 @@ def _get_report_dataset() -> pd.DataFrame | None:
 
 def _build_dataset_summary(dataframe: pd.DataFrame) -> ReportDatasetSummary:
     """Build a report-friendly summary for the shared dataset."""
+    dataset_summary, _ = _build_report_dataset_details(dataframe)
+    return dataset_summary
+
+
+def _build_report_dataset_details(
+    dataframe: pd.DataFrame,
+) -> tuple[ReportDatasetSummary, str]:
+    """Build report summary data and its lightweight quality classification."""
     numeric_frame = dataframe.select_dtypes(include="number")
     numeric_column_names = [str(column) for column in numeric_frame.columns]
     numeric_column_set = set(numeric_column_names)
@@ -65,6 +78,12 @@ def _build_dataset_summary(dataframe: pd.DataFrame) -> ReportDatasetSummary:
     missing_values = _build_missing_values(dataframe)
     rows, columns = dataframe.shape
     duplicate_rows = int(dataframe.duplicated().sum())
+    dataset_quality, quality_assessment = _build_dataset_quality_details(
+        rows=rows,
+        columns=columns,
+        missing_values=missing_values,
+        duplicate_rows=duplicate_rows,
+    )
 
     return ReportDatasetSummary(
         shape={"rows": int(rows), "columns": int(columns)},
@@ -77,12 +96,8 @@ def _build_dataset_summary(dataframe: pd.DataFrame) -> ReportDatasetSummary:
         duplicate_rows=duplicate_rows,
         memory_usage_bytes=int(dataframe.memory_usage(deep=True).sum()),
         numeric_summary=_build_numeric_summary(numeric_frame),
-        quality_assessment=_build_quality_assessment(
-            dataframe=dataframe,
-            missing_values=missing_values,
-            duplicate_rows=duplicate_rows,
-        ),
-    )
+        quality_assessment=quality_assessment,
+    ), dataset_quality
 
 
 def _build_key_insights(
@@ -241,20 +256,42 @@ def _build_quality_assessment(
 ) -> str:
     """Generate a concise data-quality assessment."""
     rows, columns = dataframe.shape
+    _, quality_assessment = _build_dataset_quality_details(
+        rows=rows,
+        columns=columns,
+        missing_values=missing_values,
+        duplicate_rows=duplicate_rows,
+    )
+    return quality_assessment
+
+
+def _build_dataset_quality_details(
+    rows: int,
+    columns: int,
+    missing_values: dict[str, int],
+    duplicate_rows: int,
+) -> tuple[str, str]:
+    """Build quality classification and its detailed assessment together."""
     total_missing = sum(missing_values.values())
     total_cells = rows * columns
     missing_rate = (total_missing / total_cells * 100) if total_cells else 0.0
 
     if total_missing == 0 and duplicate_rows == 0:
-        return "Dataset quality is strong with no missing values or duplicate rows."
+        return "Good", "Dataset quality is strong with no missing values or duplicate rows."
 
     if missing_rate <= 5 and duplicate_rows == 0:
-        return "Dataset quality is good with limited missing data and no duplicate rows."
+        return "Good", "Dataset quality is good with limited missing data and no duplicate rows."
 
     if missing_rate <= 20:
-        return "Dataset quality is acceptable, but several data-quality checks should be reviewed."
+        return (
+            "Fair",
+            "Dataset quality is acceptable, but several data-quality checks should be reviewed.",
+        )
 
-    return "Dataset quality requires attention due to significant missing data or duplicates."
+    return (
+        "Needs Attention",
+        "Dataset quality requires attention due to significant missing data or duplicates.",
+    )
 
 
 def _missing_value_insight(missing_rate: float, total_missing: int) -> str:
