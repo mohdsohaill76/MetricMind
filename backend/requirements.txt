@@ -1,0 +1,8 @@
+pydantic-settings
+email-validator
+python-multipart
+pandas
+matplotlib
+passlib[bcrypt]
+bcrypt<5
+python-jose[cryptography]

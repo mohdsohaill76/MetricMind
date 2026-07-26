@@ -19,7 +19,7 @@ export default function Sidebar() {
   const menuItems = [
     {
       name: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: <FaChartPie />,
     },
     {

@@ -1,56 +1,146 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
+import { getCurrentDataset } from "../../lib/api";
+
+interface DatasetResponse {
+  filename: string;
+  rows: number;
+  columns: number;
+  column_names: string[];
+  data: Record<string, any>[];
+}
 
 export default function SalesChart() {
+  const [dataset, setDataset] = useState<DatasetResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-    const option = {
+  useEffect(() => {
+  async function loadDataset() {
+    try {
+      setLoading(true);
+      setError("");
 
-        tooltip: {
-            trigger: "item",
-        },
+      const data = await getCurrentDataset();
 
-        legend: {
-            bottom: 0,
-        },
+      setDataset(data);
+    } catch (err) {
+      console.error("Revenue chart error:", err);
+      setError("Unable to load chart data.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-        series: [
+  loadDataset();
 
-            {
-                type: "pie",
+  const handleDatasetUploaded = () => {
+    loadDataset();
+  };
 
-                radius: ["40%", "70%"],
+  window.addEventListener(
+    "datasetUploaded",
+    handleDatasetUploaded
+  );
 
-                data: [
+  return () => {
+    window.removeEventListener(
+      "datasetUploaded",
+      handleDatasetUploaded
+    );
+  };
+}, []);
 
-                    { value: 450, name: "North" },
-                    { value: 320, name: "South" },
-                    { value: 270, name: "East" },
-                    { value: 180, name: "West" }
-
-                ]
-
-            }
-
-        ]
-
-    };
-
+  if (loading) {
     return (
+      <div className="card rounded-2xl p-6 shadow-md">
+        <h2 className="mb-5 text-xl font-semibold">
+          Sales by Region
+        </h2>
 
+        <div className="flex h-[350px] items-center justify-center">
+          <p className="text-slate-500">
+            Loading sales data...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !dataset) {
+    return (
+      <div className="card rounded-2xl p-6 shadow-md">
+        <h2 className="mb-5 text-xl font-semibold">
+          Sales by Region
+        </h2>
+
+        <div className="flex h-[350px] items-center justify-center">
+          <p className="text-slate-500">
+            {error || "No dataset available."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate total sales for each region
+  const salesByRegion: Record<string, number> = {};
+
+  dataset.data.forEach((row) => {
+    const region = String(row.Region || "Unknown");
+    const sales = Number(row.Sales) || 0;
+
+    if (!salesByRegion[region]) {
+      salesByRegion[region] = 0;
+    }
+
+    salesByRegion[region] += sales;
+  });
+
+  const chartData = Object.entries(salesByRegion).map(
+    ([region, sales]) => ({
+      value: sales,
+      name: region,
+    })
+  );
+
+  const option = {
+    tooltip: {
+      trigger: "item",
+      formatter: "{b}: ${c}",
+    },
+
+    legend: {
+      bottom: 0,
+    },
+
+    series: [
+      {
+        name: "Sales",
+        type: "pie",
+        radius: ["40%", "70%"],
+        data: chartData,
+      },
+    ],
+  };
+
+  return (
     <div className="card rounded-2xl p-6 shadow-md">
 
-            <h2 className="text-xl font-semibold mb-5">
-                Sales by Region
-            </h2>
+      <h2 className="mb-5 text-xl font-semibold">
+        Sales by Region
+      </h2>
 
-            <ReactECharts
-                option={option}
-                style={{ height: "350px" }}
-            />
+      <ReactECharts
+        option={option}
+        style={{
+          height: "350px",
+          width: "100%",
+        }}
+      />
 
-        </div>
-
-    );
-
+    </div>
+  );
 }

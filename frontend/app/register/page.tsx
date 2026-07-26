@@ -2,23 +2,79 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FaChartLine,
   FaEye,
   FaEyeSlash,
   FaCheck,
 } from "react-icons/fa";
+import { registerUser } from "../../src/lib/api";
 
 export default function RegisterPage() {
+  const router = useRouter();
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleRegister = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
 
-    alert(
-      "Registration API will be connected once the backend authentication API is ready."
-    );
+    setError("");
+    setSuccess("");
+
+    // Validate passwords
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    // Backend requires minimum 8 characters
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await registerUser(
+        username,
+        email,
+        password
+      );
+
+      setSuccess(
+        "Account created successfully! Redirecting to login..."
+      );
+
+      // Redirect to login page
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
+
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Registration failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -28,7 +84,6 @@ export default function RegisterPage() {
 
       <div className="relative hidden overflow-hidden bg-slate-900 lg:flex lg:w-1/2">
 
-        {/* Decorative Background */}
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
 
         <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl" />
@@ -36,6 +91,7 @@ export default function RegisterPage() {
         <div className="relative flex w-full flex-col justify-between p-12 xl:p-16">
 
           {/* Logo */}
+
           <div className="flex items-center gap-3">
 
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg">
@@ -56,6 +112,7 @@ export default function RegisterPage() {
 
 
           {/* Main Content */}
+
           <div className="max-w-lg">
 
             <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-blue-400">
@@ -77,9 +134,11 @@ export default function RegisterPage() {
 
 
             {/* Benefits */}
+
             <div className="mt-8 space-y-4">
 
               <div className="flex items-center gap-3 text-slate-300">
+
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
                   <FaCheck />
                 </span>
@@ -87,10 +146,12 @@ export default function RegisterPage() {
                 <span>
                   Monitor your business performance
                 </span>
+
               </div>
 
 
               <div className="flex items-center gap-3 text-slate-300">
+
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
                   <FaCheck />
                 </span>
@@ -98,10 +159,12 @@ export default function RegisterPage() {
                 <span>
                   Generate AI-powered business reports
                 </span>
+
               </div>
 
 
               <div className="flex items-center gap-3 text-slate-300">
+
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
                   <FaCheck />
                 </span>
@@ -109,6 +172,7 @@ export default function RegisterPage() {
                 <span>
                   Discover actionable business insights
                 </span>
+
               </div>
 
             </div>
@@ -117,6 +181,7 @@ export default function RegisterPage() {
 
 
           {/* Footer */}
+
           <div className="text-sm text-slate-500">
             © 2026 MetricMind. All rights reserved.
           </div>
@@ -133,6 +198,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
 
           {/* Mobile Logo */}
+
           <div className="mb-8 flex items-center gap-3 lg:hidden">
 
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
@@ -153,6 +219,7 @@ export default function RegisterPage() {
 
 
           {/* Header */}
+
           <div className="mb-7">
 
             <h2 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -166,27 +233,61 @@ export default function RegisterPage() {
           </div>
 
 
+          {/* Error Message */}
+
+          {error && (
+            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4">
+
+              <p className="text-sm font-medium text-red-600">
+                {error}
+              </p>
+
+            </div>
+          )}
+
+
+          {/* Success Message */}
+
+          {success && (
+            <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4">
+
+              <p className="text-sm font-medium text-green-600">
+                {success}
+              </p>
+
+            </div>
+          )}
+
+
           {/* Register Form */}
+
           <form
             onSubmit={handleRegister}
             className="space-y-4"
           >
 
-            {/* Full Name */}
+            {/* Username */}
+
             <div>
 
               <label
-                htmlFor="fullName"
+                htmlFor="username"
                 className="mb-2 block text-sm font-semibold text-slate-700"
               >
-                Full Name
+                Username
               </label>
 
               <input
-                id="fullName"
+                id="username"
                 type="text"
-                placeholder="Enter your full name"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) =>
+                  setUsername(e.target.value)
+                }
                 required
+                minLength={3}
+                maxLength={50}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
               />
 
@@ -194,6 +295,7 @@ export default function RegisterPage() {
 
 
             {/* Email */}
+
             <div>
 
               <label
@@ -207,6 +309,10 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
                 required
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
               />
@@ -215,6 +321,7 @@ export default function RegisterPage() {
 
 
             {/* Password */}
+
             <div>
 
               <label
@@ -228,10 +335,19 @@ export default function RegisterPage() {
 
                 <input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
                   placeholder="Create a password"
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
                   required
-                  minLength={6}
+                  minLength={8}
+                  maxLength={128}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                 />
 
@@ -247,11 +363,13 @@ export default function RegisterPage() {
                       : "Show password"
                   }
                 >
+
                   {showPassword ? (
                     <FaEyeSlash />
                   ) : (
                     <FaEye />
                   )}
+
                 </button>
 
               </div>
@@ -260,6 +378,7 @@ export default function RegisterPage() {
 
 
             {/* Confirm Password */}
+
             <div>
 
               <label
@@ -279,8 +398,13 @@ export default function RegisterPage() {
                       : "password"
                   }
                   placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) =>
+                    setConfirmPassword(e.target.value)
+                  }
                   required
-                  minLength={6}
+                  minLength={8}
+                  maxLength={128}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                 />
 
@@ -298,11 +422,13 @@ export default function RegisterPage() {
                       : "Show password"
                   }
                 >
+
                   {showConfirmPassword ? (
                     <FaEyeSlash />
                   ) : (
                     <FaEye />
                   )}
+
                 </button>
 
               </div>
@@ -311,6 +437,7 @@ export default function RegisterPage() {
 
 
             {/* Terms */}
+
             <div className="flex items-start gap-3 pt-2">
 
               <input
@@ -332,17 +459,24 @@ export default function RegisterPage() {
 
 
             {/* Register Button */}
+
             <button
               type="submit"
-              className="mt-2 w-full rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg"
+              disabled={loading}
+              className="mt-2 w-full rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Create Account
+
+              {loading
+                ? "Creating Account..."
+                : "Create Account"}
+
             </button>
 
           </form>
 
 
           {/* Login Link */}
+
           <div className="mt-7 text-center">
 
             <p className="text-sm text-slate-500">
@@ -354,12 +488,14 @@ export default function RegisterPage() {
               >
                 Sign in
               </Link>
+
             </p>
 
           </div>
 
 
           {/* Security Note */}
+
           <div className="mt-7 rounded-xl border border-slate-100 bg-slate-50 p-4 text-center">
 
             <p className="text-xs leading-5 text-slate-500">
