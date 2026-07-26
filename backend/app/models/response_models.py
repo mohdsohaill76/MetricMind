@@ -146,6 +146,13 @@ class UserResponse(BaseModel):
     email: str
 
 
+class UserUpdateResponse(UserResponse):
+    """Updated profile details and a replacement token when the username changes."""
+
+    access_token: str | None = None
+    token_type: str | None = None
+
+
 class RegistrationResponse(BaseModel):
     """Response payload returned after successful user registration."""
 
@@ -158,6 +165,12 @@ class TokenResponse(BaseModel):
 
     access_token: str
     token_type: str
+
+
+class MessageResponse(BaseModel):
+    """Response payload containing a successful-operation message."""
+
+    message: str
 
 
 class DashboardSummaryResponse(BaseModel):

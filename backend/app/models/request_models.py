@@ -1,6 +1,6 @@
 """Pydantic models for API request payloads."""
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
 class ChatRequest(BaseModel):
@@ -95,3 +95,24 @@ class UserLoginRequest(BaseModel):
 
     username: str = Field(..., min_length=1, max_length=50)
     password: str = Field(..., min_length=1, max_length=128)
+
+
+class UserUpdateRequest(BaseModel):
+    """Request payload for updating the authenticated user's profile."""
+
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+    email: EmailStr | None = None
+
+    @model_validator(mode="after")
+    def require_profile_change(self) -> "UserUpdateRequest":
+        """Require at least one profile field to be supplied."""
+        if self.username is None and self.email is None:
+            raise ValueError("At least one of username or email must be provided.")
+        return self
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request payload for changing the authenticated user's password."""
+
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)

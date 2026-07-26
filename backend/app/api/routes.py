@@ -9,20 +9,24 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.models.request_models import (
     ChatRequest,
     ChartGenerationRequest,
+    ChangePasswordRequest,
     ReportGenerationRequest,
     UserLoginRequest,
     UserRegistrationRequest,
+    UserUpdateRequest,
 )
 from app.models.response_models import (
     AnalyticsSummaryResponse,
     ChatResponse,
     ChartGenerationResponse,
     DashboardSummaryResponse,
+    MessageResponse,
     ReportGenerationResponse,
     ReportResponse,
     ReportsListResponse,
     RegistrationResponse,
     TokenResponse,
+    UserUpdateResponse,
     UploadResponse,
     UserResponse,
 )
@@ -35,7 +39,14 @@ from app.services.report_service import generate_report
 from app.services.report_storage_service import get_all_report_metadata, get_report
 from app.services.semantic_service import process_question
 from app.services.upload_service import process_upload
-from app.services.user_service import authenticate_user, get_user, register_user
+from app.services.user_service import (
+    authenticate_user,
+    change_password,
+    delete_user,
+    get_user,
+    register_user,
+    update_user,
+)
 
 router = APIRouter(prefix="/api/v1")
 logger = logging.getLogger(__name__)
@@ -174,7 +185,7 @@ async def login(request: UserLoginRequest) -> TokenResponse:
     response_model=UserResponse,
     summary="Get the authenticated user",
 )
-async def get_current_user(
+async def get_authenticated_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> UserResponse:
     """Return the user represented by a valid bearer token."""
@@ -187,6 +198,65 @@ async def get_current_user(
         raise _credentials_exception()
 
     return user
+
+
+AuthenticatedUser = Annotated[UserResponse, Depends(get_authenticated_user)]
+
+
+@router.get(
+    "/users/me",
+    response_model=UserResponse,
+    summary="Get the authenticated user's profile",
+)
+async def get_my_profile(user: AuthenticatedUser) -> UserResponse:
+    """Return the authenticated user's profile."""
+    return user
+
+
+@router.put(
+    "/users/me",
+    response_model=UserUpdateResponse,
+    response_model_exclude_none=True,
+    summary="Update the authenticated user's profile",
+)
+async def update_my_profile(
+    request: UserUpdateRequest,
+    user: AuthenticatedUser,
+) -> UserUpdateResponse:
+    """Update the authenticated user's username and/or email."""
+    updated_user = update_user(user.username, request)
+    if updated_user.username == user.username:
+        return UserUpdateResponse(**updated_user.model_dump())
+
+    return UserUpdateResponse(
+        **updated_user.model_dump(),
+        access_token=create_access_token(updated_user.username),
+        token_type="bearer",
+    )
+
+
+@router.put(
+    "/users/change-password",
+    response_model=MessageResponse,
+    summary="Change the authenticated user's password",
+)
+async def change_my_password(
+    request: ChangePasswordRequest,
+    user: AuthenticatedUser,
+) -> MessageResponse:
+    """Change the authenticated user's password after current-password verification."""
+    change_password(user.username, request)
+    return MessageResponse(message="Password changed successfully.")
+
+
+@router.delete(
+    "/users/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete the authenticated user",
+)
+async def delete_my_profile(user: AuthenticatedUser) -> None:
+    """Delete the authenticated user from the in-memory store."""
+    delete_user(user.username)
 
 
 def _credentials_exception() -> HTTPException:
