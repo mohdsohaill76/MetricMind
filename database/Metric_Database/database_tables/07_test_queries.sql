@@ -142,6 +142,8 @@ inner join business.dim_date as dd
 on fs.date_id = dd.date_id
 
 group by
+    dd.year
+    order by
     dd.year;
 
 -- 14. Salesperson Performance
