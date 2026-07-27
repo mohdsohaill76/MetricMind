@@ -18,18 +18,16 @@ Database & Data Warehouse Engineer
 - Data Warehouse
 
 ## Database Architecture
--- Business Schema
+- Business Schema
         │
-        ▼
--- Staging Schema
+- Staging Schema
         │
-        ▼
--- Analytics Schema
+- Analytics Schema
 
 ## Features
-Business Schema
--- Staging Schema
--- Analytics Schema
--- ETL Process
--- Reporting Views
--- SQL Test Queries
+- Business Schema
+- Staging Schema
+- Analytics Schema
+- ETL Process
+- Reporting Views
+- SQL Test Queries
