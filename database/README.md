@@ -11,4 +11,25 @@ Database & Data Warehouse Engineer
 - pgAdmin
 - SQL
 - VS Code
-- Git
+- Git & Github
+
+## Project Structure
+- Database
+- Data Warehouse
+
+## Database Architecture
+-- Business Schema
+        │
+        ▼
+-- Staging Schema
+        │
+        ▼
+-- Analytics Schema
+
+## Features
+Business Schema
+-- Staging Schema
+-- Analytics Schema
+-- ETL Process
+-- Reporting Views
+-- SQL Test Queries
