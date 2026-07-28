@@ -1,0 +1,21 @@
+SELECT
+  "users".age "customers__age",
+  "users".first_name "customers__first_name",
+  "users".first_name || ' ' || "users".last_name "customers__full_name",
+  "users".gender "customers__gender",
+  "users".id "customers__id",
+  "users".last_name "customers__last_name"
+FROM
+  orders AS "base_orders"
+  LEFT JOIN users AS "users" ON "base_orders".user_id = "users".id
+GROUP BY
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ORDER BY
+  1 ASC
+LIMIT
+  10000
