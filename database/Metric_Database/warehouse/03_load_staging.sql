@@ -1,3 +1,12 @@
+-- Clear Existing Staging Data
+
+truncate table staging.stg_sales;
+truncate table staging.stg_customer;
+truncate table staging.stg_product;
+truncate table staging.stg_region;
+truncate table staging.stg_date;
+truncate table staging.stg_salesperson;
+
 -- Load Customer Data
 
 insert into staging.stg_customer
