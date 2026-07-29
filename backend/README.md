@@ -28,15 +28,16 @@ CUBE_API_TOKEN=your_cube_api_token_here
 ```
 
 ### How to obtain the Groq API Key
-If you need the active project API key to run this locally, you can ping Basil directly to get it. 
 
-Alternatively, you can generate your own free API key for testing by following these steps:
+you can generate your own free API key for testing by following these steps:
 1. Go to the Groq Cloud Console: https://console.groq.com
 2. Log in or create a free account.
 3. On the top right navigation menu, click on **API Keys**.
 4. Click the **Create API Key** button.
-5. Give it a name (e.g., "MetricMind Local").
+5. Give it a name (e.g., "MetricMind").
 6. Copy the generated key immediately and paste it into your `.env` file as `GROQ_API_KEY=your_new_key_here`.
+
+Alternatively, if you need the active project API key to run this locally, you can ping me directly to get it.
 
 ## Installation Steps
 1. Clone the repository and switch to the backend folder.
