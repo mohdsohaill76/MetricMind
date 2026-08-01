@@ -2,7 +2,8 @@
 // MetricMind API Service
 // ============================================================
 
-const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 // ============================================================
 // Helper - Get Access Token
@@ -67,12 +68,12 @@ async function handleApiResponse(response: Response) {
       errorMessage = data.detail;
     }
 
-    // Custom backend error
+    // Custom backend message
     else if (typeof data?.message === "string") {
       errorMessage = data.message;
     }
 
-    // Custom error field
+    // Custom backend error
     else if (typeof data?.error === "string") {
       errorMessage = data.error;
     }
@@ -110,9 +111,7 @@ export async function registerUser(
       }
     );
 
-    const data = await handleApiResponse(response);
-
-    return data;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "Register API Error:",
@@ -148,7 +147,8 @@ export async function loginUser(data: {
       }
     );
 
-    const result = await handleApiResponse(response);
+    const result =
+      await handleApiResponse(response);
 
     // Save access token after successful login
     if (result?.access_token) {
@@ -196,9 +196,7 @@ export async function getCurrentUser() {
       }
     );
 
-    const result = await handleApiResponse(response);
-
-    return result;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "Current User API Error:",
@@ -228,9 +226,8 @@ export function isAuthenticated(): boolean {
     return false;
   }
 
-  const token = localStorage.getItem(
-    "access_token"
-  );
+  const token =
+    localStorage.getItem("access_token");
 
   return Boolean(token);
 }
@@ -252,9 +249,7 @@ export async function getDashboardSummary() {
       }
     );
 
-    const data = await handleApiResponse(response);
-
-    return data;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "Dashboard API Error:",
@@ -282,9 +277,7 @@ export async function getAnalyticsSummary() {
       }
     );
 
-    const data = await handleApiResponse(response);
-
-    return data;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "Analytics API Error:",
@@ -315,7 +308,8 @@ export async function uploadDataset(
     const headers: HeadersInit = {};
 
     if (token) {
-      headers.Authorization = `Bearer ${token}`;
+      headers.Authorization =
+        `Bearer ${token}`;
     }
 
     const response = await fetch(
@@ -329,7 +323,8 @@ export async function uploadDataset(
       }
     );
 
-    const data = await handleApiResponse(response);
+    const data =
+      await handleApiResponse(response);
 
     console.log(
       "Dataset uploaded successfully:",
@@ -340,36 +335,6 @@ export async function uploadDataset(
   } catch (error) {
     console.error(
       "Upload API Error:",
-      error
-    );
-
-    throw error;
-  }
-}
-
-// ============================================================
-// Get Current Uploaded Dataset
-// ============================================================
-
-export async function getCurrentDataset() {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/dataset`,
-      {
-        method: "GET",
-
-        headers: getAuthHeaders(),
-
-        cache: "no-store",
-      }
-    );
-
-    const data = await handleApiResponse(response);
-
-    return data;
-  } catch (error) {
-    console.error(
-      "Current Dataset API Error:",
       error
     );
 
@@ -402,7 +367,8 @@ export async function generateChart(
       }
     );
 
-    const data = await handleApiResponse(response);
+    const data =
+      await handleApiResponse(response);
 
     console.log(
       "Chart generated successfully:",
@@ -443,9 +409,7 @@ export async function generateAIReport(
       }
     );
 
-    const data = await handleApiResponse(response);
-
-    return data;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "AI Report API Error:",
@@ -473,9 +437,7 @@ export async function getReports() {
       }
     );
 
-    const data = await handleApiResponse(response);
-
-    return data;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "Reports API Error:",
@@ -507,9 +469,7 @@ export async function getReport(
       }
     );
 
-    const data = await handleApiResponse(response);
-
-    return data;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "Report API Error:",
@@ -541,9 +501,7 @@ export async function sendChatMessage(
       }
     );
 
-    const data = await handleApiResponse(response);
-
-    return data;
+    return await handleApiResponse(response);
   } catch (error) {
     console.error(
       "Chat API Error:",
