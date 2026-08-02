@@ -4,14 +4,11 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Dict, Any
 
-# Load the environment variables
+# Load environment variables
 load_dotenv()
 
-# Verify the Groq key is loaded correctly
-if not os.getenv("GROQ_API_KEY"):
-    raise ValueError("GROQ_API_KEY is missing from your .env file!")
 
 # Define the exact JSON structure requested by the team leader
 class SemanticQuery(BaseModel):
@@ -19,49 +16,67 @@ class SemanticQuery(BaseModel):
     dimensions: List[str] = Field(description="List of dimensions, e.g., retail_sales.category")
     filters: List[str] = Field(description="List of filters to apply")
 
-# Initialize the Groq LLM
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile", 
-    temperature=0
-)
 
-# Force the LLM to use the JSON structure
-structured_llm = llm.with_structured_output(SemanticQuery)
-
-# Update the strict system instructions
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are the MetricMind AI Service. Translate user questions into structured semantic layer queries. Always return exact JSON matching the schema."),
-    ("user", "{input}")
-])
-
-# Create the LangChain processing chain
-agent_chain = prompt | structured_llm
-
-
-def get_semantic_query(user_question: str) -> dict:
+def get_semantic_query(user_question: str) -> Dict[str, Any]:
     """
     Translates a natural language question into a structured JSON query.
+    Includes graceful error handling for missing keys, empty inputs, and timeouts.
     """
+    # 1. Gracefully handle empty or whitespace-only inputs
+    if not user_question or not user_question.strip():
+        return {"error": "User question cannot be empty."}
+
+    # 2. Gracefully handle missing GROQ API Key
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if not groq_api_key:
+        return {"error": "GROQ_API_KEY is missing from environment variables."}
+
     try:
-        response = agent_chain.invoke({"input": user_question})
+        # Initialize Groq LLM with a 10-second timeout to prevent hanging
+        llm = ChatGroq(
+            model="llama-3.3-70b-versatile",
+            temperature=0,
+            groq_api_key=groq_api_key,
+            request_timeout=10.0
+        )
+
+        # Force structured JSON output matching SemanticQuery
+        structured_llm = llm.with_structured_output(SemanticQuery)
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are the MetricMind AI Service. Translate user questions into structured semantic layer queries. Always return exact JSON matching the schema."),
+            ("user", "{input}")
+        ])
+
+        agent_chain = prompt | structured_llm
+        response = agent_chain.invoke({"input": user_question.strip()})
         return response.model_dump()
+
     except Exception as e:
-        print(f"Error generating query: {e}")
-        return {"measures": [], "dimensions": [], "filters": []}
+        # Catch network timeouts, API errors, or schema parsing issues
+        return {"error": f"Failed to generate query: {str(e)}"}
 
 
-# --- NEW: Requirement 8 - Connect to Cube API ---
-def execute_cube_query(semantic_query: dict) -> dict:
+def execute_cube_query(semantic_query: Dict[str, Any]) -> Dict[str, Any]:
     """
     Sends the structured JSON query to the Cube REST API.
+    Handles defaults, missing URLs, and request errors gracefully.
     """
-    cube_url = os.getenv("CUBE_API_URL")
-    cube_token = os.getenv("CUBE_API_TOKEN")
+    # If upstream step produced an error, pass it along
+    if "error" in semantic_query:
+        return semantic_query
 
-    # Failsafe if your teammate hasn't provided the real URL yet
+    cube_url = os.getenv("CUBE_API_URL")
+    cube_token = os.getenv("CUBE_API_TOKEN", "")
+
+    # Failsafe if Cube API URL is missing or set to placeholder
     if not cube_url or cube_url == "your_cube_api_url_here":
-        print("⚠️ Cube API placeholders detected. Returning mocked results.")
-        return {"status": "success", "mock_data": "Waiting for real Cube API URL"}
+        return {
+            "status": "success",
+            "mode": "mock",
+            "generated_query": semantic_query,
+            "data": [{"message": "Mock data response. Add real CUBE_API_URL in .env to fetch database records."}]
+        }
 
     headers = {
         "Authorization": f"Bearer {cube_token}",
@@ -69,30 +84,37 @@ def execute_cube_query(semantic_query: dict) -> dict:
     }
 
     try:
-        # Wrap the semantic query in a payload that Cube expects
         payload = {"query": semantic_query}
-        
-        # Make the POST request to the Cube semantic layer API
-        response = requests.post(f"{cube_url}/cubejs-api/v1/load", json=payload, headers=headers)
+        response = requests.post(
+            f"{cube_url.rstrip('/')}/cubejs-api/v1/load", 
+            json=payload, 
+            headers=headers, 
+            timeout=10.0
+        )
         response.raise_for_status()
         
-        # Return the final business data
-        return response.json()
-        
+        return {
+            "status": "success",
+            "mode": "live",
+            "generated_query": semantic_query,
+            "data": response.json()
+        }
+
     except requests.exceptions.RequestException as e:
-        print(f"Error connecting to Cube API: {e}")
-        return {"error": str(e)}
+        return {
+            "error": f"Cube API connection failed: {str(e)}",
+            "generated_query": semantic_query
+        }
 
 
-# --- NEW: Full Integration Workflow ---
-def answer_business_question(user_question: str) -> dict:
+def answer_business_question(user_question: str) -> Dict[str, Any]:
     """
     The full workflow: User Question -> LangChain -> JSON -> Cube API -> Results
     """
-    # 1. AI translates the question into JSON
     semantic_json = get_semantic_query(user_question)
     
-    # 2. Python sends the JSON to Cube to get the final numbers
-    final_data = execute_cube_query(semantic_json)
-    
-    return final_data
+    # If translation failed, return the error immediately
+    if "error" in semantic_json:
+        return semantic_json
+
+    return execute_cube_query(semantic_json)
