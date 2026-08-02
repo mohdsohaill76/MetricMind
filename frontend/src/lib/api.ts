@@ -343,6 +343,33 @@ export async function uploadDataset(
 }
 
 // ============================================================
+// Get Current Uploaded Dataset
+// ============================================================
+
+export async function getCurrentDataset() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/dataset`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(),
+        cache: "no-store",
+      }
+    );
+
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error(
+      "Current Dataset API Error:",
+      error
+    );
+
+    throw error;
+  }
+}
+
+
+// ============================================================
 // Generate Chart
 // ============================================================
 
@@ -385,13 +412,14 @@ export async function generateChart(
     throw error;
   }
 }
-
 // ============================================================
 // Generate AI Report
 // ============================================================
 
 export async function generateAIReport(
   request?: {
+    model?: string;
+    analysis_options?: string[];
     report_focus?: string;
   }
 ) {
@@ -400,16 +428,14 @@ export async function generateAIReport(
       `${API_BASE_URL}/ai/generate-report`,
       {
         method: "POST",
-
         headers: getAuthHeaders(),
-
-        body: JSON.stringify(
-          request || {}
-        ),
+        body: JSON.stringify(request || {}),
       }
     );
 
-    return await handleApiResponse(response);
+    const data = await handleApiResponse(response);
+
+    return data;
   } catch (error) {
     console.error(
       "AI Report API Error:",
