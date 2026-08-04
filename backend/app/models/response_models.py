@@ -173,6 +173,44 @@ class MessageResponse(BaseModel):
     message: str
 
 
+class RevenueOverview(BaseModel):
+    """Revenue metrics used by dashboard overview cards."""
+
+    total_sales: float
+    total_profit: float
+    average_sales: float
+    average_profit: float
+
+
+class SalesByRegion(BaseModel):
+    """Sales aggregated for a single region."""
+
+    region: str
+    sales: float
+
+
+class MonthlyPerformance(BaseModel):
+    """Sales and profit aggregated for a calendar month."""
+
+    month: str
+    sales: float
+    profit: float
+
+
+class CategorySales(BaseModel):
+    """Sales aggregated for a single product category."""
+
+    category: str
+    sales: float
+
+
+class ProductSales(BaseModel):
+    """Sales aggregated for a single product."""
+
+    product: str
+    sales: float
+
+
 class DashboardSummaryResponse(BaseModel):
     """Response payload containing a high-level dataset dashboard summary."""
 
@@ -207,6 +245,11 @@ class DashboardSummaryResponse(BaseModel):
     upload_status: str
     available_charts: list[str]
     generated_at: datetime
+    revenue_overview: RevenueOverview
+    sales_by_region: list[SalesByRegion]
+    monthly_performance: list[MonthlyPerformance]
+    category_sales: list[CategorySales]
+    top_products: list[ProductSales]
 
 
 class NumericColumnAnalytics(BaseModel):

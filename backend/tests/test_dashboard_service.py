@@ -44,6 +44,98 @@ def test_generate_dashboard_summary_uses_shared_dataset_profile() -> None:
     )
     assert response.upload_status == "uploaded"
     assert response.available_charts == ["histogram", "box", "bar", "line", "scatter"]
+    assert response.revenue_overview.model_dump() == {
+        "total_sales": 0.0,
+        "total_profit": 0.0,
+        "average_sales": 0.0,
+        "average_profit": 0.0,
+    }
+    assert response.sales_by_region == []
+    assert response.monthly_performance == []
+    assert response.category_sales == []
+    assert response.top_products == []
+
+
+def test_generate_dashboard_summary_builds_chart_analytics() -> None:
+    """Dashboard analytics aggregate a Superstore-shaped shared dataset."""
+    dataset_service.set_dataset(
+        pd.DataFrame(
+            {
+                "Order Date": ["2024-02-12", "2024-01-03", "2024-02-20", "2024-01-27"],
+                "Region": ["West", "East", "West", "East"],
+                "Category": ["Furniture", "Office Supplies", "Furniture", "Technology"],
+                "Product Name": ["Desk", "Paper", "Desk", "Laptop"],
+                "Sales": [200.0, 50.0, 300.0, 500.0],
+                "Profit": [20.0, 5.0, 30.0, -50.0],
+            }
+        )
+    )
+
+    response = generate_dashboard_summary()
+
+    assert response.revenue_overview.model_dump() == {
+        "total_sales": 1050.0,
+        "total_profit": 5.0,
+        "average_sales": 262.5,
+        "average_profit": 1.25,
+    }
+    assert [item.model_dump() for item in response.sales_by_region] == [
+        {"region": "East", "sales": 550.0},
+        {"region": "West", "sales": 500.0},
+    ]
+    assert [item.model_dump() for item in response.monthly_performance] == [
+        {"month": "2024-01", "sales": 550.0, "profit": -45.0},
+        {"month": "2024-02", "sales": 500.0, "profit": 50.0},
+    ]
+    assert [item.model_dump() for item in response.category_sales] == [
+        {"category": "Furniture", "sales": 500.0},
+        {"category": "Office Supplies", "sales": 50.0},
+        {"category": "Technology", "sales": 500.0},
+    ]
+    assert [item.model_dump() for item in response.top_products] == [
+        {"product": "Desk", "sales": 500.0},
+        {"product": "Laptop", "sales": 500.0},
+        {"product": "Paper", "sales": 50.0},
+    ]
+
+
+def test_generate_dashboard_summary_handles_missing_columns() -> None:
+    """Absent source fields return empty chart arrays without raising an error."""
+    dataset_service.set_dataset(pd.DataFrame({"Region": ["East"], "Sales": [100]}))
+
+    response = generate_dashboard_summary()
+
+    assert response.revenue_overview.model_dump() == {
+        "total_sales": 100.0,
+        "total_profit": 0.0,
+        "average_sales": 100.0,
+        "average_profit": 0.0,
+    }
+    assert [item.model_dump() for item in response.sales_by_region] == [
+        {"region": "East", "sales": 100.0}
+    ]
+    assert response.monthly_performance == []
+    assert response.category_sales == []
+    assert response.top_products == []
+
+
+def test_generate_dashboard_summary_handles_empty_dataset() -> None:
+    """An empty stored dataset returns valid zero metrics and chart arrays."""
+    dataset_service.set_dataset(pd.DataFrame(columns=["Region", "Sales"]))
+
+    response = generate_dashboard_summary()
+
+    assert response.total_rows == 0
+    assert response.revenue_overview.model_dump() == {
+        "total_sales": 0.0,
+        "total_profit": 0.0,
+        "average_sales": 0.0,
+        "average_profit": 0.0,
+    }
+    assert response.sales_by_region == []
+    assert response.monthly_performance == []
+    assert response.category_sales == []
+    assert response.top_products == []
 
 
 def test_generate_dashboard_summary_requires_dataset() -> None:

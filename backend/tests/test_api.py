@@ -416,6 +416,38 @@ def test_dashboard_summary_returns_dataset_overview() -> None:
     assert "generated_at" in body
 
 
+def test_dashboard_summary_returns_uploaded_superstore_analytics() -> None:
+    """The dashboard endpoint returns chart-ready analytics after a Superstore upload."""
+    csv_contents = (
+        "Order Date,Region,Category,Product Name,Sales,Profit\n"
+        "2024-01-02,East,Furniture,Desk,100,10\n"
+        "2024-02-04,West,Technology,Laptop,300,30\n"
+    )
+    client.post(
+        "/api/v1/upload",
+        files={"file": ("superstore.csv", csv_contents, "text/csv")},
+    )
+
+    response = client.get("/api/v1/dashboard/summary")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["revenue_overview"] == {
+        "total_sales": 400.0,
+        "total_profit": 40.0,
+        "average_sales": 200.0,
+        "average_profit": 20.0,
+    }
+    assert body["sales_by_region"] == [
+        {"region": "East", "sales": 100.0},
+        {"region": "West", "sales": 300.0},
+    ]
+    assert body["monthly_performance"] == [
+        {"month": "2024-01", "sales": 100.0, "profit": 10.0},
+        {"month": "2024-02", "sales": 300.0, "profit": 30.0},
+    ]
+
+
 def test_dashboard_summary_rejects_missing_dataset() -> None:
     """The dashboard summary endpoint returns a 400 when no dataset is available."""
     response = client.get("/api/v1/dashboard/summary")
