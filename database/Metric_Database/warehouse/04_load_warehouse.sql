@@ -1,12 +1,13 @@
 -- Clear Existing Analytics Data
 
-truncate table analytics.fact_sales;
-truncate table analytics.dim_customer;
-truncate table analytics.dim_product;
-truncate table analytics.dim_region;
-truncate table analytics.dim_date;
-truncate table analytics.dim_salesperson;
-
+TRUNCATE TABLE
+    analytics.fact_sales,
+    analytics.dim_customer,
+    analytics.dim_product,
+    analytics.dim_region,
+    analytics.dim_date,
+    analytics.dim_salesperson;
+    
 -- Load Customer Data
 
 insert into analytics.dim_customer

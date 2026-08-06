@@ -24,6 +24,8 @@ select
         when 46 then 'Alok Verma' when 47 then 'Pallavi Sharma' when 48 then 'Saurabh Jain'
         when 49 then 'Kriti Agarwal' when 50 then 'Varsha Singh'
     end,
+    
+    'customer' || id || '@gmail.com',
 
     case
     when id < 10 then '637654320' || id
