@@ -1,0 +1,41 @@
+cubes:
+  - name: retail_sales
+    sql_table: public.retail_sales
+    data_source: default
+
+    joins: []
+
+    dimensions:
+      - name: customer_id
+        sql: "{CUBE}.\"Customer ID\""
+        type: string
+
+      - name: gender
+        sql: "{CUBE}.\"Gender\""
+        type: string
+
+      - name: price_per_unit
+        sql: "{CUBE}.\"Price per Unit\""
+        type: string
+
+      - name: product_category
+        sql: "{CUBE}.\"Product Category\""
+        type: string
+
+      - name: total_amount
+        sql: "{CUBE}.\"Total Amount\""
+        type: string
+
+      - name: date
+        sql: "{CUBE}.\"Date\""
+        type: time
+
+    measures:
+      - name: count
+        type: count
+
+      - name: quantity
+        sql: "{CUBE}.\"Quantity\""
+        type: sum
+
+    pre_aggregations:
