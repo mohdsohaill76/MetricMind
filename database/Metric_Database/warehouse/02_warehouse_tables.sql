@@ -87,3 +87,22 @@ create table analytics.fact_sales
     foreign key (date_id) references analytics.dim_date(date_id),
     foreign key (salesperson_id) references analytics.dim_salesperson(salesperson_id)
 );
+
+-- ==========================================
+-- ANALYTICS FACT SALES INDEXES
+-- ==========================================
+
+create index if not exists idx_analytics_fact_sales_customer
+on analytics.fact_sales(customer_id);
+
+create index if not exists idx_analytics_fact_sales_product
+on analytics.fact_sales(product_id);
+
+create index if not exists idx_analytics_fact_sales_region
+on analytics.fact_sales(region_id);
+
+create index if not exists idx_analytics_fact_sales_date
+on analytics.fact_sales(date_id);
+
+create index if not exists idx_analytics_fact_sales_salesperson
+on analytics.fact_sales(salesperson_id);

@@ -202,22 +202,3 @@ check (discount <= revenue);
 alter table business.fact_sales
 add constraint chk_cost_less_than_revenue
 check (cost <= revenue);
-
--- ==========================================
--- ANALYTICS FACT SALES INDEXES
--- ==========================================
-
-create index if not exists idx_analytics_fact_sales_customer
-on analytics.fact_sales(customer_id);
-
-create index if not exists idx_analytics_fact_sales_product
-on analytics.fact_sales(product_id);
-
-create index if not exists idx_analytics_fact_sales_region
-on analytics.fact_sales(region_id);
-
-create index if not exists idx_analytics_fact_sales_date
-on analytics.fact_sales(date_id);
-
-create index if not exists idx_analytics_fact_sales_salesperson
-on analytics.fact_sales(salesperson_id);
