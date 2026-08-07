@@ -262,11 +262,8 @@ insert into business.fact_sales
     discount,
     sales_channel
 )
-
 select
-
     id,
-
     (id % 50) + 1,
     (id % 50) + 1,
     (id % 4) + 1,
@@ -274,15 +271,12 @@ select
     (id % 10) + 1,
     (id % 5) + 1,
     ((id % 20) + 1) * 5000,
-    ((id % 15) + 1) * 3000,
+    ((id % 20) + 1) * 5000 * 0.60,
     ((id % 5) + 1) * 100,
-
+    
     case
         when id % 2 = 0 then 'Online'
         else 'Offline'
     end
 
-from generate_series(1,100) as id;
-
-update business.fact_sales
-set cost = revenue * 0.60;
+from generate_series(1, 100) AS id;
