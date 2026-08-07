@@ -14,9 +14,8 @@ from app.models.response_models import (
     NumericColumnAnalytics,
     ReportDatasetSummary,
 )
-from app.services.dataset_service import get_dataset, has_dataset
-from app.services.report_service import _build_available_charts, _build_quality_assessment
-from app.services.upload_service import _build_profile
+from app.services.dataset_service import get_dataset, get_dataset_profile, has_dataset
+from app.services.report_service import _build_available_charts, _build_report_dataset_details
 
 
 def generate_analytics_summary() -> AnalyticsSummaryResponse:
@@ -25,24 +24,11 @@ def generate_analytics_summary() -> AnalyticsSummaryResponse:
     if dataset is None:
         raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
 
-    profile = _build_profile(dataset)
-    report_summary = ReportDatasetSummary(
-        shape=profile.shape,
-        missing_values=profile.missing_values,
-        missing_percentage=profile.missing_percentage,
-        dtypes=profile.dtypes,
-        numeric_columns=profile.numeric_columns,
-        categorical_columns=profile.categorical_columns,
-        unique_values=profile.unique_values,
-        duplicate_rows=profile.duplicate_rows,
-        memory_usage_bytes=profile.memory_usage_bytes,
-        numeric_summary=profile.numeric_summary,
-        quality_assessment=_build_quality_assessment(
-            dataframe=dataset,
-            missing_values=profile.missing_values,
-            duplicate_rows=profile.duplicate_rows,
-        ),
-    )
+    profile = get_dataset_profile()
+    if profile is None:
+        raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
+
+    report_summary, _ = _build_report_dataset_details(profile)
 
     return AnalyticsSummaryResponse(
         total_rows=profile.shape["rows"],

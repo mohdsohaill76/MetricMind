@@ -56,6 +56,20 @@ def test_generate_dashboard_summary_uses_shared_dataset_profile() -> None:
     assert response.top_products == []
 
 
+def test_generate_dashboard_summary_reuses_stored_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dashboard generation does not rebuild the profile after dataset storage."""
+    dataset_service.set_dataset(pd.DataFrame({"sales": [100, 150]}))
+
+    def fail_if_profile_is_rebuilt(_: pd.DataFrame) -> None:
+        pytest.fail("Dashboard generation rebuilt the stored dataset profile.")
+
+    monkeypatch.setattr(dataset_service, "build_dataset_profile", fail_if_profile_is_rebuilt)
+
+    assert generate_dashboard_summary().total_rows == 2
+
+
 def test_generate_dashboard_summary_builds_chart_analytics() -> None:
     """Dashboard analytics aggregate a Superstore-shaped shared dataset."""
     dataset_service.set_dataset(

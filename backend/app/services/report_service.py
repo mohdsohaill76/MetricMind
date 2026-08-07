@@ -13,8 +13,14 @@ from app.models.request_models import ReportGenerationRequest
 from app.models.response_models import (
     ReportDatasetSummary,
     ReportGenerationResponse,
+    UploadProfile,
 )
-from app.services.dataset_service import get_dataset, has_dataset
+from app.services.dataset_service import (
+    build_dataset_profile,
+    get_dataset,
+    get_dataset_profile,
+    has_dataset,
+)
 from app.services.report_storage_service import save_report
 
 
@@ -29,7 +35,11 @@ def generate_report(
     if dataset is None:
         raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
 
-    dataset_summary, dataset_quality = _build_report_dataset_details(dataset)
+    profile = get_dataset_profile()
+    if profile is None:
+        raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
+
+    dataset_summary, dataset_quality = _build_report_dataset_details(profile)
     key_insights = _build_key_insights(dataset_summary, request)
     recommendations = _build_recommendations(dataset_summary)
 
@@ -59,43 +69,34 @@ def _get_report_dataset() -> pd.DataFrame | None:
 
 def _build_dataset_summary(dataframe: pd.DataFrame) -> ReportDatasetSummary:
     """Build a report-friendly summary for the shared dataset."""
-    dataset_summary, _ = _build_report_dataset_details(dataframe)
+    dataset_summary, _ = _build_report_dataset_details(
+        build_dataset_profile(dataframe),
+    )
     return dataset_summary
 
 
 def _build_report_dataset_details(
-    dataframe: pd.DataFrame,
+    profile: UploadProfile,
 ) -> tuple[ReportDatasetSummary, str]:
     """Build report summary data and its lightweight quality classification."""
-    numeric_frame = dataframe.select_dtypes(include="number")
-    numeric_column_names = [str(column) for column in numeric_frame.columns]
-    numeric_column_set = set(numeric_column_names)
-    categorical_columns = [
-        str(column)
-        for column in dataframe.columns
-        if str(column) not in numeric_column_set
-    ]
-    missing_values = _build_missing_values(dataframe)
-    rows, columns = dataframe.shape
-    duplicate_rows = int(dataframe.duplicated().sum())
     dataset_quality, quality_assessment = _build_dataset_quality_details(
-        rows=rows,
-        columns=columns,
-        missing_values=missing_values,
-        duplicate_rows=duplicate_rows,
+        rows=profile.shape["rows"],
+        columns=profile.shape["columns"],
+        missing_values=profile.missing_values,
+        duplicate_rows=profile.duplicate_rows,
     )
 
     return ReportDatasetSummary(
-        shape={"rows": int(rows), "columns": int(columns)},
-        missing_values=missing_values,
-        missing_percentage=_build_missing_percentage(missing_values, rows),
-        dtypes=_build_dtypes(dataframe),
-        numeric_columns=numeric_column_names,
-        categorical_columns=categorical_columns,
-        unique_values=_build_unique_values(dataframe),
-        duplicate_rows=duplicate_rows,
-        memory_usage_bytes=int(dataframe.memory_usage(deep=True).sum()),
-        numeric_summary=_build_numeric_summary(numeric_frame),
+        shape=profile.shape,
+        missing_values=profile.missing_values,
+        missing_percentage=profile.missing_percentage,
+        dtypes=profile.dtypes,
+        numeric_columns=profile.numeric_columns,
+        categorical_columns=profile.categorical_columns,
+        unique_values=profile.unique_values,
+        duplicate_rows=profile.duplicate_rows,
+        memory_usage_bytes=profile.memory_usage_bytes,
+        numeric_summary=profile.numeric_summary,
         quality_assessment=quality_assessment,
     ), dataset_quality
 
@@ -174,95 +175,6 @@ def _build_report_id(dataframe: pd.DataFrame) -> str:
     """Create a deterministic report identifier from the dataset contents."""
     digest = sha256(dataframe.to_csv(index=False).encode("utf-8")).hexdigest()[:12]
     return f"report-{digest}"
-
-
-def _build_missing_values(dataframe: pd.DataFrame) -> dict[str, int]:
-    """Count missing values per column."""
-    return {
-        str(column): int(count)
-        for column, count in dataframe.isna().sum().items()
-    }
-
-
-def _build_missing_percentage(
-    missing_values: dict[str, int],
-    rows: int,
-) -> dict[str, float]:
-    """Calculate missing-value percentages per column."""
-    if rows == 0:
-        return {column: 0.0 for column in missing_values}
-
-    return {
-        column: round((missing_count / rows) * 100, 2)
-        for column, missing_count in missing_values.items()
-    }
-
-
-def _build_dtypes(dataframe: pd.DataFrame) -> dict[str, str]:
-    """Capture the inferred dtype for each column."""
-    return {str(column): str(dtype) for column, dtype in dataframe.dtypes.items()}
-
-
-def _build_unique_values(dataframe: pd.DataFrame) -> dict[str, int]:
-    """Count unique values per column."""
-    return {
-        str(column): int(count)
-        for column, count in dataframe.nunique(dropna=True).items()
-    }
-
-
-def _build_numeric_summary(numeric_frame: pd.DataFrame) -> dict[str, dict[str, float]]:
-    """Build summary statistics for numeric columns."""
-    if numeric_frame.empty:
-        return {}
-
-    summary_frame = numeric_frame.describe(percentiles=[0.25, 0.5, 0.75])
-    population_std = numeric_frame.std(ddof=0)
-    numeric_summary: dict[str, dict[str, float]] = {}
-
-    for column in numeric_frame.columns:
-        column_name = str(column)
-        if summary_frame[column].get("count", 0.0) == 0.0:
-            numeric_summary[column_name] = {
-                "count": 0.0,
-                "mean": 0.0,
-                "std": 0.0,
-                "min": 0.0,
-                "25%": 0.0,
-                "50%": 0.0,
-                "75%": 0.0,
-                "max": 0.0,
-            }
-            continue
-
-        numeric_summary[column_name] = {
-            "count": float(summary_frame[column]["count"]),
-            "mean": float(summary_frame[column]["mean"]),
-            "std": float(population_std[column]),
-            "min": float(summary_frame[column]["min"]),
-            "25%": float(summary_frame[column]["25%"]),
-            "50%": float(summary_frame[column]["50%"]),
-            "75%": float(summary_frame[column]["75%"]),
-            "max": float(summary_frame[column]["max"]),
-        }
-
-    return numeric_summary
-
-
-def _build_quality_assessment(
-    dataframe: pd.DataFrame,
-    missing_values: dict[str, int],
-    duplicate_rows: int,
-) -> str:
-    """Generate a concise data-quality assessment."""
-    rows, columns = dataframe.shape
-    _, quality_assessment = _build_dataset_quality_details(
-        rows=rows,
-        columns=columns,
-        missing_values=missing_values,
-        duplicate_rows=duplicate_rows,
-    )
-    return quality_assessment
 
 
 def _build_dataset_quality_details(

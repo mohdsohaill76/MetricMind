@@ -59,3 +59,17 @@ def test_generate_analytics_summary_requires_dataset() -> None:
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "No dataset has been uploaded."
+
+
+def test_generate_analytics_summary_reuses_stored_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Analytics generation does not rebuild the profile after dataset storage."""
+    dataset_service.set_dataset(pd.DataFrame({"sales": [100, 150]}))
+
+    def fail_if_profile_is_rebuilt(_: pd.DataFrame) -> None:
+        pytest.fail("Analytics generation rebuilt the stored dataset profile.")
+
+    monkeypatch.setattr(dataset_service, "build_dataset_profile", fail_if_profile_is_rebuilt)
+
+    assert generate_analytics_summary().total_rows == 2
