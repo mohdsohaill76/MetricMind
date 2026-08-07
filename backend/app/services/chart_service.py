@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import time
 from typing import Final
 from uuid import uuid4
 
@@ -16,6 +17,7 @@ from fastapi import HTTPException
 
 from app.models.request_models import ChartGenerationRequest
 from app.models.response_models import ChartGenerationResponse
+from app.config.settings import settings
 from app.services.dataset_service import get_dataset, has_dataset
 
 
@@ -48,6 +50,7 @@ def generate_chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
     _validate_chart_requirements(dataset, chart_type, request.x_column, request.y_column)
 
     CHARTS_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    cleanup_expired_charts()
     filename = f"{uuid4().hex}.png"
     chart_path = CHARTS_DIRECTORY / filename
 
@@ -59,6 +62,22 @@ def generate_chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
         chart_path=str(chart_path),
         message="Chart generated successfully.",
     )
+
+
+def cleanup_expired_charts(current_time: float | None = None) -> None:
+    """Remove generated PNG files older than the configured retention window."""
+    if not CHARTS_DIRECTORY.exists():
+        return
+
+    now = time() if current_time is None else current_time
+    expiration_time = now - (settings.CHART_RETENTION_HOURS * 60 * 60)
+
+    for chart_path in CHARTS_DIRECTORY.glob("*.png"):
+        try:
+            if chart_path.is_file() and chart_path.stat().st_mtime < expiration_time:
+                chart_path.unlink()
+        except OSError:
+            continue
 
 
 def _get_chart_dataset() -> pd.DataFrame | None:

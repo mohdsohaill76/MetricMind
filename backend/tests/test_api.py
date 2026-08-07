@@ -1,8 +1,10 @@
 """Request-validation tests for the MetricMind API."""
 
 from io import StringIO
+from os import utime
 from pathlib import Path
 from collections.abc import Generator
+from time import time
 
 import pandas as pd
 import pytest
@@ -327,6 +329,37 @@ def test_chart_generates_valid_histogram(chart_output_dir: Path) -> None:
     assert body["message"] == "Chart generated successfully."
     assert Path(body["chart_path"]).exists()
     assert Path(body["chart_path"]).parent == chart_output_dir
+
+
+def test_chart_generation_removes_only_expired_chart_files(
+    chart_output_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Chart creation removes expired PNGs while preserving current and unrelated files."""
+    dataset_service.set_dataset(pd.DataFrame({"sales": [100, 150]}))
+    expired_chart = chart_output_dir / "expired.png"
+    current_chart = chart_output_dir / "current.png"
+    unrelated_file = chart_output_dir / "notes.txt"
+    chart_output_dir.mkdir()
+    expired_chart.write_bytes(b"expired")
+    current_chart.write_bytes(b"current")
+    unrelated_file.write_text("keep")
+    monkeypatch.setattr(chart_service.settings, "CHART_RETENTION_HOURS", 1)
+    expired_time = time() - (2 * 60 * 60)
+    expired_chart.touch()
+    utime(expired_chart, (expired_time, expired_time))
+
+    response = client.post(
+        "/api/v1/chart",
+        headers=_authorization_header(),
+        json={"chart_type": "histogram", "x_column": "sales"},
+    )
+
+    assert response.status_code == 200
+    assert expired_chart.exists() is False
+    assert current_chart.exists()
+    assert unrelated_file.exists()
+    assert Path(response.json()["chart_path"]).exists()
 
 
 @pytest.mark.parametrize(
