@@ -75,8 +75,43 @@ async def chat(request: ChatRequest) -> ChatResponse:
     return ChatResponse(response=response)
 
 
+def _credentials_exception() -> HTTPException:
+    """Build the standard unauthenticated response."""
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@router.get(
+    "/auth/me",
+    response_model=UserResponse,
+    summary="Get the authenticated user",
+)
+async def get_authenticated_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> UserResponse:
+    """Return the user represented by a valid bearer token."""
+    if credentials is None:
+        raise _credentials_exception()
+
+    username = verify_access_token(credentials.credentials)
+    user = get_user(username)
+    if user is None:
+        raise _credentials_exception()
+
+    return user
+
+
+AuthenticatedUser = Annotated[UserResponse, Depends(get_authenticated_user)]
+
+
 @router.post("/chart", response_model=ChartGenerationResponse)
-async def chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
+async def chart(
+    request: ChartGenerationRequest,
+    user: AuthenticatedUser,
+) -> ChartGenerationResponse:
     """Return chart metadata for the requested chart configuration."""
     return generate_chart(request)
 
@@ -90,7 +125,7 @@ async def chart(request: ChartGenerationRequest) -> ChartGenerationResponse:
         "dataset service and existing profiling logic."
     ),
 )
-async def dashboard_summary() -> DashboardSummaryResponse:
+async def dashboard_summary(user: AuthenticatedUser) -> DashboardSummaryResponse:
     """Return the current dashboard summary for the uploaded dataset."""
     return generate_dashboard_summary()
 
@@ -104,7 +139,7 @@ async def dashboard_summary() -> DashboardSummaryResponse:
         "dataset service and existing profiling logic."
     ),
 )
-async def analytics_summary() -> AnalyticsSummaryResponse:
+async def analytics_summary(user: AuthenticatedUser) -> AnalyticsSummaryResponse:
     """Return the current analytics summary for the uploaded dataset."""
     return generate_analytics_summary()
 
@@ -119,6 +154,7 @@ async def analytics_summary() -> AnalyticsSummaryResponse:
     ),
 )
 async def generate_ai_report(
+    user: AuthenticatedUser,
     request: ReportGenerationRequest | None = None,
 ) -> ReportGenerationResponse:
     """Return a structured report derived from the uploaded dataset."""
@@ -133,7 +169,7 @@ async def generate_ai_report(
         "Return lightweight metadata for all reports generated during this application run."
     ),
 )
-async def list_reports() -> ReportsListResponse:
+async def list_reports(user: AuthenticatedUser) -> ReportsListResponse:
     """Return metadata for all stored reports."""
     metadata = get_all_report_metadata()
     return ReportsListResponse(count=len(metadata), reports=metadata)
@@ -145,7 +181,7 @@ async def list_reports() -> ReportsListResponse:
     summary="Get a generated report",
     description="Return the complete report for the requested report identifier.",
 )
-async def get_stored_report(report_id: str) -> ReportResponse:
+async def get_stored_report(report_id: str, user: AuthenticatedUser) -> ReportResponse:
     """Return one complete stored report."""
     report = get_report(report_id)
     if report is None:
@@ -178,29 +214,6 @@ async def login(request: UserLoginRequest) -> TokenResponse:
         access_token=create_access_token(user.username),
         token_type="bearer",
     )
-
-
-@router.get(
-    "/auth/me",
-    response_model=UserResponse,
-    summary="Get the authenticated user",
-)
-async def get_authenticated_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> UserResponse:
-    """Return the user represented by a valid bearer token."""
-    if credentials is None:
-        raise _credentials_exception()
-
-    username = verify_access_token(credentials.credentials)
-    user = get_user(username)
-    if user is None:
-        raise _credentials_exception()
-
-    return user
-
-
-AuthenticatedUser = Annotated[UserResponse, Depends(get_authenticated_user)]
 
 
 @router.get(
@@ -259,16 +272,10 @@ async def delete_my_profile(user: AuthenticatedUser) -> None:
     delete_user(user.username)
 
 
-def _credentials_exception() -> HTTPException:
-    """Build the standard unauthenticated response."""
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-
 @router.post("/upload", response_model=UploadResponse)
-async def upload_csv(file: Annotated[UploadFile, File(...)]) -> UploadResponse:
+async def upload_csv(
+    file: Annotated[UploadFile, File(...)],
+    user: AuthenticatedUser,
+) -> UploadResponse:
     """Return a preview of an uploaded CSV dataset."""
     return await process_upload(file)

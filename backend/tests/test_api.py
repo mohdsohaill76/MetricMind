@@ -11,17 +11,26 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.services import dataset_service
 from app.services import chart_service
+from app.services.user_service import clear_users
+from tests.auth_helpers import build_bearer_headers
 
 
 client = TestClient(app)
+TEST_USER_PAYLOAD = {
+    "username": "sohail",
+    "email": "sohail@example.com",
+    "password": "secure-password",
+}
 
 
 @pytest.fixture(autouse=True)
 def clear_shared_dataset() -> Generator[None, None, None]:
-    """Ensure each test starts with an empty shared dataset."""
+    """Ensure each test starts with isolated in-memory state."""
     dataset_service.clear_dataset()
+    clear_users()
     yield
     dataset_service.clear_dataset()
+    clear_users()
 
 
 @pytest.fixture()
@@ -43,6 +52,11 @@ def chart_output_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     output_dir = tmp_path / "generated_charts"
     monkeypatch.setattr(chart_service, "CHARTS_DIRECTORY", output_dir)
     return output_dir
+
+
+def _authorization_header() -> dict[str, str]:
+    """Create a bearer token for the shared test user."""
+    return build_bearer_headers(client, **TEST_USER_PAYLOAD)
 
 
 def test_chat_accepts_valid_question() -> None:
@@ -88,6 +102,7 @@ def test_upload_returns_dataset_preview() -> None:
     csv_contents = "metric,value,category,notes\nrevenue,0,A,\nrevenue,0,A,\ncost,10,B,\nprofit,10,B,note\n"
     response = client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("metrics.csv", csv_contents, "text/csv")},
     )
 
@@ -149,6 +164,7 @@ def test_upload_stores_dataset() -> None:
 
     response = client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("metrics.csv", csv_contents, "text/csv")},
     )
 
@@ -167,10 +183,12 @@ def test_multiple_uploads_replace_the_previous_dataset() -> None:
 
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("first.csv", first_csv, "text/csv")},
     )
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("second.csv", second_csv, "text/csv")},
     )
 
@@ -233,6 +251,7 @@ def test_upload_rejects_invalid_csv(
     """Invalid uploads use the API's standard HTTP error response."""
     response = client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": (filename, contents, "text/csv")},
     )
 
@@ -244,6 +263,7 @@ def test_chart_generates_valid_bar_chart(chart_output_dir: Path) -> None:
     """A valid bar request generates a PNG chart and returns metadata."""
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={
             "file": (
                 "metrics.csv",
@@ -255,6 +275,7 @@ def test_chart_generates_valid_bar_chart(chart_output_dir: Path) -> None:
 
     response = client.post(
         "/api/v1/chart",
+        headers=_authorization_header(),
         json={
             "chart_type": "bar",
             "x_column": "category",
@@ -280,6 +301,7 @@ def test_chart_generates_valid_histogram(chart_output_dir: Path) -> None:
     """A valid histogram request generates a PNG chart."""
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={
             "file": (
                 "metrics.csv",
@@ -291,6 +313,7 @@ def test_chart_generates_valid_histogram(chart_output_dir: Path) -> None:
 
     response = client.post(
         "/api/v1/chart",
+        headers=_authorization_header(),
         json={
             "chart_type": "histogram",
             "x_column": "response_time",
@@ -350,6 +373,7 @@ def test_chart_rejects_invalid_requests(
     """Invalid chart requests use the API's standard HTTP error response."""
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={
             "file": (
                 "metrics.csv",
@@ -359,7 +383,11 @@ def test_chart_rejects_invalid_requests(
         },
     )
 
-    response = client.post("/api/v1/chart", json=payload)
+    response = client.post(
+        "/api/v1/chart",
+        headers=_authorization_header(),
+        json=payload,
+    )
 
     assert response.status_code == 400
     assert response.json() == {"error": "HTTP Error", "message": message}
@@ -369,6 +397,7 @@ def test_chart_rejects_missing_dataset() -> None:
     """The chart service returns a 400 when no dataset is available."""
     response = client.post(
         "/api/v1/chart",
+        headers=_authorization_header(),
         json={
             "chart_type": "bar",
             "x_column": "category",
@@ -395,10 +424,11 @@ def test_dashboard_summary_returns_dataset_overview() -> None:
 
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("metrics.csv", csv_contents, "text/csv")},
     )
 
-    response = client.get("/api/v1/dashboard/summary")
+    response = client.get("/api/v1/dashboard/summary", headers=_authorization_header())
     body = response.json()
 
     assert response.status_code == 200
@@ -425,10 +455,11 @@ def test_dashboard_summary_returns_uploaded_superstore_analytics() -> None:
     )
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("superstore.csv", csv_contents, "text/csv")},
     )
 
-    response = client.get("/api/v1/dashboard/summary")
+    response = client.get("/api/v1/dashboard/summary", headers=_authorization_header())
     body = response.json()
 
     assert response.status_code == 200
@@ -450,7 +481,7 @@ def test_dashboard_summary_returns_uploaded_superstore_analytics() -> None:
 
 def test_dashboard_summary_rejects_missing_dataset() -> None:
     """The dashboard summary endpoint returns a 400 when no dataset is available."""
-    response = client.get("/api/v1/dashboard/summary")
+    response = client.get("/api/v1/dashboard/summary", headers=_authorization_header())
 
     assert response.status_code == 400
     assert response.json() == {
@@ -471,10 +502,11 @@ def test_analytics_summary_returns_detailed_analysis() -> None:
 
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("metrics.csv", csv_contents, "text/csv")},
     )
 
-    response = client.get("/api/v1/analytics/summary")
+    response = client.get("/api/v1/analytics/summary", headers=_authorization_header())
     body = response.json()
 
     assert response.status_code == 200
@@ -508,7 +540,7 @@ def test_analytics_summary_returns_detailed_analysis() -> None:
 
 def test_analytics_summary_rejects_missing_dataset() -> None:
     """The analytics summary endpoint returns a 400 when no dataset is available."""
-    response = client.get("/api/v1/analytics/summary")
+    response = client.get("/api/v1/analytics/summary", headers=_authorization_header())
 
     assert response.status_code == 400
     assert response.json() == {
@@ -529,10 +561,11 @@ def test_generate_report_returns_dataset_insights() -> None:
 
     client.post(
         "/api/v1/upload",
+        headers=_authorization_header(),
         files={"file": ("metrics.csv", csv_contents, "text/csv")},
     )
 
-    response = client.post("/api/v1/ai/generate-report")
+    response = client.post("/api/v1/ai/generate-report", headers=_authorization_header())
     body = response.json()
 
     assert response.status_code == 200
@@ -552,10 +585,37 @@ def test_generate_report_returns_dataset_insights() -> None:
 
 def test_generate_report_rejects_missing_dataset() -> None:
     """The report service returns a 400 when no dataset is available."""
-    response = client.post("/api/v1/ai/generate-report")
+    response = client.post("/api/v1/ai/generate-report", headers=_authorization_header())
 
     assert response.status_code == 400
     assert response.json() == {
         "error": "HTTP Error",
         "message": "No dataset has been uploaded.",
     }
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "request_kwargs"),
+    [
+        ("post", "/api/v1/upload", {"files": {"file": ("metrics.csv", "metric,value\na,1\n", "text/csv")}}),
+        (
+        "post",
+        "/api/v1/chart",
+        {"json": {"chart_type": "bar", "x_column": "category", "y_column": "sales"}},
+        ),
+        ("get", "/api/v1/dashboard/summary", {}),
+        ("get", "/api/v1/analytics/summary", {}),
+        ("post", "/api/v1/ai/generate-report", {}),
+    ],
+    ids=["upload", "chart", "dashboard", "analytics", "generate-report"],
+)
+def test_protected_dataset_endpoints_require_authentication(
+    method: str,
+    path: str,
+    request_kwargs: dict[str, dict[str, str] | dict[str, tuple[str, str, str]]],
+) -> None:
+    """Protected dataset endpoints reject missing bearer tokens."""
+    response = getattr(client, method)(path, **request_kwargs)
+
+    assert response.status_code == 401
+    assert response.json()["message"] == "Could not validate credentials."
