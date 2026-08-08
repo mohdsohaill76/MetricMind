@@ -1,0 +1,95 @@
+cubes:
+  - name: base_orders
+
+    sql: SELECT * FROM orders
+
+    
+    public: false
+
+   
+    joins:
+      - name: line_items
+        sql: '{CUBE.id} = {line_items.order_id}'
+        relationship: one_to_many
+
+      - name: users
+        sql: "{CUBE.user_id} = {users.id}"
+        relationship: many_to_one
+
+   
+    dimensions:
+      - name: id
+        sql: id
+        type: number
+        primary_key: true
+
+      - name: user_id
+        sql: user_id
+        type: number
+        public: false
+
+      - name: status
+        sql: status
+        type: string
+
+      - name: created_at
+        sql: "{CUBE}.created_at::TIMESTAMP"
+        type: time
+
+      - name: completed_at
+        sql: "{CUBE}.completed_at::TIMESTAMP"
+        type: time
+
+    
+    measures:
+      - name: count
+        type: count
+
+      - name: completed_count
+        type: count
+        filters:
+          - sql: "{CUBE}.status = 'completed'"
+
+      - name: completed_percentage
+        sql: "({completed_count} / NULLIF({count}, 0)) * 1.0"
+        type: number
+        format: percent
+
+      - name: total
+        type: count
+        rolling_window:
+          trailing: unbounded
+
+     
+      {% set metrics = {
+        'dau': '1 day',
+        'wau': '1 week',
+        'mau': '1 month'
+      } %}
+      {% for name, window in metrics | items %}
+      - name: {{ name }}
+        sql: user_id
+        type: count_distinct
+        rolling_window:
+          trailing: {{ window }}
+      {% endfor %}
+
+    
+    pre_aggregations:
+      - name: orders_by_month
+        measures:
+          - count
+          - completed_count
+          - completed_percentage
+        time_dimension: created_at
+        granularity: month
+
+        
+      - name: orders_and_line_items_of_users
+        measures:
+          - count
+          - line_items.count
+          - line_items.sum_price
+        dimensions:
+          - users.gender
+          - users.state

@@ -1,0 +1,6 @@
+SELECT
+  count("products".id) "products_view__count"
+FROM
+  products AS "products"
+LIMIT
+  10000

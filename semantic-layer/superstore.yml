@@ -1,0 +1,89 @@
+cubes:
+  - name: superstore
+    sql_table: public.superstore
+    data_source: default
+
+    joins: []
+
+    dimensions:
+      - name: id
+        sql: id
+        type: number
+        primary_key: true
+
+      - name: category
+        sql: category
+        type: string
+
+      - name: city
+        sql: city
+        type: string
+
+      - name: country
+        sql: country
+        type: string
+
+      - name: discount
+        sql: discount
+        type: string
+
+      - name: profit
+        sql: profit
+        type: string
+
+      - name: region
+        sql: region
+        type: string
+
+      - name: sales
+        sql: sales
+        type: string
+
+      - name: segment
+        sql: segment
+        type: string
+
+      - name: ship_mode
+        sql: ship_mode
+        type: string
+
+      - name: state
+        sql: state
+        type: string
+
+      - name: sub_category
+        sql: sub_category
+        type: string
+
+    measures:
+      - name: count
+        type: count
+
+      - name: quantity
+        sql: quantity
+        type: sum
+
+      - name: revenue
+        sql: sales
+        type: sum
+
+      - name: profit
+        sql: profit
+        type: sum
+      
+      - name: cost
+        sql: "sales-profit"
+        type: number
+
+      - name: margin
+        sql: "profit/sales"
+        type: number
+
+      - name: count
+        type: count
+ 
+
+    pre_aggregations:
+      # Pre-aggregation definitions go here.
+      # Learn more in the documentation: https://cube.dev/docs/caching/pre-aggregations/getting-started
+

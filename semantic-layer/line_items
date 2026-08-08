@@ -1,0 +1,55 @@
+cubes:
+  - name: line_items
+    sql: SELECT * FROM line_items
+    public: false
+
+    joins:
+      - name: products
+        sql: "{CUBE.product_id} = {products.id}"
+        relationship: many_to_one
+
+    dimensions:
+      - name: id
+        sql: id
+        type: number
+        primary_key: true
+
+      - name: order_id
+        sql: order_id
+        type: number
+        public: false
+
+      - name: product_id
+        sql: product_id
+        type: number
+        public: false
+
+
+      - name: price
+        sql: "price::DECIMAL"
+        type: number
+        format: currency
+
+    measures:
+      - name: count
+        type: count
+
+      - name: sum_price
+        sql: "{price}"
+        type: sum
+        public: false
+
+      
+      - name: avg_price
+        sql: "{sum_price} / {count}"
+        type: number
+
+       
+      - name: price_range
+        sql: "FLOOR(MIN({price})) || '..' || CEIL(MAX({price}))"
+        type: string
+
+        
+      - name: product_count
+        sql: product_id
+        type: count_distinct_approx
