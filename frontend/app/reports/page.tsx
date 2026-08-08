@@ -188,7 +188,7 @@ export default function ReportsPage() {
         <Navbar />
 
 
-        <main className="min-h-screen bg-slate-100 p-8">
+        <main className="min-h-screen bg-[var(--background)] p-8">
 
 
           {/* ========================================
@@ -219,7 +219,7 @@ export default function ReportsPage() {
             <div className="relative max-w-xl">
 
               <FaMagnifyingGlass
-                className="absolute left-4 top-4 text-gray-400"
+                className="absolute left-4 top-4 text-[var(--foreground)] opacity-40"
               />
 
 
@@ -411,7 +411,7 @@ export default function ReportsPage() {
 
                         <button
                           type="button"
-                          className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                          className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-[var(--background)]"
                         >
 
                           <FaDownload />

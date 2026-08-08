@@ -2,30 +2,42 @@
 
 import { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
-import { getCurrentDataset } from "../../lib/api";
+import { getDashboardSummary } from "../../lib/api";
 
-interface DatasetResponse {
-  filename: string;
-  rows: number;
-  columns: number;
-  column_names: string[];
-  data: Record<string, any>[];
+interface DashboardSummary {
+  revenue_overview: {
+    total_sales: number;
+    total_profit: number;
+    average_sales: number;
+    average_profit: number;
+  };
+  sales_by_region: {
+    region: string;
+    sales: number;
+  }[];
+  monthly_performance: {
+    month: string;
+    sales: number;
+    profit: number;
+  }[];
+  category_sales: unknown[];
+  top_products: unknown[];
 }
 
 export default function SalesChart() {
-  const [dataset, setDataset] = useState<DatasetResponse | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-  async function loadDataset() {
+  async function loadDashboardSummary() {
     try {
       setLoading(true);
       setError("");
 
-      const data = await getCurrentDataset();
+      const data = await getDashboardSummary();
 
-      setDataset(data);
+      setSummary(data);
     } catch (err) {
       console.error("Revenue chart error:", err);
       setError("Unable to load chart data.");
@@ -34,10 +46,10 @@ export default function SalesChart() {
     }
   }
 
-  loadDataset();
+  loadDashboardSummary();
 
   const handleDatasetUploaded = () => {
-    loadDataset();
+    loadDashboardSummary();
   };
 
   window.addEventListener(
@@ -69,7 +81,7 @@ export default function SalesChart() {
     );
   }
 
-  if (error || !dataset) {
+  if (error || !summary) {
     return (
       <div className="card rounded-2xl p-6 shadow-md">
         <h2 className="mb-5 text-xl font-semibold">
@@ -85,22 +97,8 @@ export default function SalesChart() {
     );
   }
 
-  // Calculate total sales for each region
-  const salesByRegion: Record<string, number> = {};
-
-  dataset.data.forEach((row) => {
-    const region = String(row.Region || "Unknown");
-    const sales = Number(row.Sales) || 0;
-
-    if (!salesByRegion[region]) {
-      salesByRegion[region] = 0;
-    }
-
-    salesByRegion[region] += sales;
-  });
-
-  const chartData = Object.entries(salesByRegion).map(
-    ([region, sales]) => ({
+  const chartData = summary.sales_by_region.map(
+    ({ region, sales }) => ({
       value: sales,
       name: region,
     })

@@ -280,7 +280,7 @@ export default function AIGeneratorPage() {
 
 
         {/* Main Content */}
-        <main className="min-h-screen bg-slate-100 p-8">
+        <main className="min-h-screen bg-[var(--background)] p-8">
 
 
           {/* ================================
@@ -289,11 +289,11 @@ export default function AIGeneratorPage() {
 
           <div className="mb-8">
 
-            <h1 className="text-4xl font-bold text-slate-800">
+            <h1 className="text-4xl font-bold text-[var(--foreground)]">
               AI Report Generator
             </h1>
 
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-[var(--foreground)] opacity-70">
               Upload your dataset and generate
               AI-powered business insights.
             </p>
@@ -306,7 +306,7 @@ export default function AIGeneratorPage() {
               Upload Section
           ================================= */}
 
-          <div className="rounded-2xl bg-white p-8 shadow-md">
+          <div className="rounded-2xl bg-[var(--card-background)] p-8 shadow-md">
 
             <h2 className="mb-6 text-2xl font-semibold">
               Upload Dataset
@@ -326,7 +326,7 @@ export default function AIGeneratorPage() {
               </h3>
 
 
-              <p className="mt-2 text-gray-500">
+              <p className="mt-2 text-[var(--foreground)] opacity-60">
                 CSV • XLSX • JSON Supported
               </p>
 
@@ -354,7 +354,7 @@ export default function AIGeneratorPage() {
               Dataset Information
           ================================= */}
 
-          <div className="mt-8 rounded-2xl bg-white p-8 shadow-md">
+          <div className="mt-8 rounded-2xl bg-[var(--card-background)] p-8 shadow-md">
 
             <h2 className="mb-6 text-2xl font-semibold">
               Dataset Information
@@ -368,7 +368,7 @@ export default function AIGeneratorPage() {
 
               <div>
 
-                <p className="text-gray-500">
+                <p className="text-[var(--foreground)] opacity-60">
                   File Name
                 </p>
 
@@ -386,7 +386,7 @@ export default function AIGeneratorPage() {
 
               <div>
 
-                <p className="text-gray-500">
+                <p className="text-[var(--foreground)] opacity-60">
                   File Size
                 </p>
 
@@ -410,7 +410,7 @@ export default function AIGeneratorPage() {
 
               <div>
 
-                <p className="text-gray-500">
+                <p className="text-[var(--foreground)] opacity-60">
                   Records
                 </p>
 
@@ -428,7 +428,7 @@ export default function AIGeneratorPage() {
 
               <div>
 
-                <p className="text-gray-500">
+                <p className="text-[var(--foreground)] opacity-60">
                   Status
                 </p>
 
@@ -462,7 +462,7 @@ export default function AIGeneratorPage() {
               AI Model Selection
           ================================= */}
 
-          <div className="mt-8 rounded-2xl bg-white p-8 shadow-md">
+          <div className="mt-8 rounded-2xl bg-[var(--card-background)] p-8 shadow-md">
 
             <div className="mb-6 flex items-center gap-3">
 
@@ -482,7 +482,7 @@ export default function AIGeneratorPage() {
                   event.target.value
                 )
               }
-              className="w-full rounded-xl border p-4 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--background)] p-4 text-[var(--foreground)] outline-none focus:ring-2 focus:ring-blue-500"
             >
 
               <option value="GPT-5.5">
@@ -511,7 +511,7 @@ export default function AIGeneratorPage() {
               Analysis Options
           ================================= */}
 
-          <div className="mt-8 rounded-2xl bg-white p-8 shadow-md">
+          <div className="mt-8 rounded-2xl bg-[var(--card-background)] p-8 shadow-md">
 
             <h2 className="mb-6 text-2xl font-semibold">
               Analysis Options
@@ -710,7 +710,7 @@ export default function AIGeneratorPage() {
                 selectedFile &&
                 !uploading
                   ? "bg-blue-600 hover:bg-blue-700"
-                  : "cursor-not-allowed bg-gray-400"
+                    : "cursor-not-allowed bg-[var(--border-color)]"
               }`}
             >
 
@@ -736,7 +736,7 @@ export default function AIGeneratorPage() {
                 uploadSuccess &&
                 !generatingReport
                   ? "bg-purple-600 hover:bg-purple-700"
-                  : "cursor-not-allowed bg-gray-400"
+                    : "cursor-not-allowed bg-[var(--border-color)]"
               }`}
             >
 

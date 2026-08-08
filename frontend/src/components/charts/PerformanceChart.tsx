@@ -2,30 +2,42 @@
 
 import { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
-import { getCurrentDataset } from "../../lib/api";
+import { getDashboardSummary } from "../../lib/api";
 
-interface DatasetResponse {
-  filename: string;
-  rows: number;
-  columns: number;
-  column_names: string[];
-  data: Record<string, any>[];
+interface DashboardSummary {
+  revenue_overview: {
+    total_sales: number;
+    total_profit: number;
+    average_sales: number;
+    average_profit: number;
+  };
+  sales_by_region: {
+    region: string;
+    sales: number;
+  }[];
+  monthly_performance: {
+    month: string;
+    sales: number;
+    profit: number;
+  }[];
+  category_sales: unknown[];
+  top_products: unknown[];
 }
 
 export default function PerformanceChart() {
-  const [dataset, setDataset] = useState<DatasetResponse | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-  async function loadDataset() {
+  async function loadDashboardSummary() {
     try {
       setLoading(true);
       setError("");
 
-      const data = await getCurrentDataset();
+      const data = await getDashboardSummary();
 
-      setDataset(data);
+      setSummary(data);
     } catch (err) {
       console.error("Revenue chart error:", err);
       setError("Unable to load chart data.");
@@ -34,10 +46,10 @@ export default function PerformanceChart() {
     }
   }
 
-  loadDataset();
+  loadDashboardSummary();
 
   const handleDatasetUploaded = () => {
-    loadDataset();
+    loadDashboardSummary();
   };
 
   window.addEventListener(
@@ -60,7 +72,7 @@ export default function PerformanceChart() {
         </h2>
 
         <div className="flex h-[350px] items-center justify-center">
-          <p className="text-slate-500">
+          <p className="text-[var(--foreground)] opacity-70">
             Loading performance data...
           </p>
         </div>
@@ -68,7 +80,7 @@ export default function PerformanceChart() {
     );
   }
 
-  if (error || !dataset) {
+  if (error || !summary) {
     return (
       <div className="card rounded-2xl p-6 shadow-md">
         <h2 className="mb-5 text-xl font-semibold">
@@ -76,7 +88,7 @@ export default function PerformanceChart() {
         </h2>
 
         <div className="flex h-[350px] items-center justify-center">
-          <p className="text-slate-500">
+          <p className="text-[var(--foreground)] opacity-70">
             {error || "No dataset available."}
           </p>
         </div>
@@ -84,22 +96,8 @@ export default function PerformanceChart() {
     );
   }
 
-  // Calculate total profit for each date
-  const profitByDate: Record<string, number> = {};
-
-  dataset.data.forEach((row) => {
-    const date = String(row.Date);
-    const profit = Number(row.Profit) || 0;
-
-    if (!profitByDate[date]) {
-      profitByDate[date] = 0;
-    }
-
-    profitByDate[date] += profit;
-  });
-
-  const dates = Object.keys(profitByDate);
-  const profitValues = Object.values(profitByDate);
+  const dates = summary.monthly_performance.map((item) => item.month);
+  const profitValues = summary.monthly_performance.map((item) => item.profit);
 
   const option = {
     tooltip: {

@@ -69,7 +69,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex min-h-screen bg-[var(--background)]">
 
       {/* Sidebar */}
       <Sidebar />
@@ -81,7 +81,7 @@ export default function Home() {
         <Navbar />
 
         {/* Dashboard Content */}
-        <main className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6 lg:px-8">
+        <main className="min-h-screen bg-[var(--background)] px-4 py-6 sm:px-6 lg:px-8">
 
           {/* Dashboard Header */}
           <section className="mb-8">
@@ -89,11 +89,11 @@ export default function Home() {
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 
               <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-800 sm:text-4xl">
+                <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
                   Dashboard
                 </h1>
 
-                <p className="mt-2 text-sm text-slate-500 sm:text-base">
+                <p className="mt-2 text-sm text-[var(--foreground)] opacity-70 sm:text-base">
                   Welcome back! Here's your business overview.
                 </p>
               </div>
@@ -109,8 +109,8 @@ export default function Home() {
 
           {/* Loading State */}
           {loading && (
-            <div className="mb-8 rounded-xl bg-white p-6 shadow-md">
-              <p className="text-slate-600">
+            <div className="mb-8 rounded-xl bg-[var(--card-background)] p-6 shadow-md">
+              <p className="text-[var(--foreground)] opacity-80">
                 Loading dashboard data...
               </p>
             </div>
@@ -127,11 +127,11 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-800">
+                  <h2 className="text-xl font-semibold text-[var(--foreground)]">
                     No Dataset Uploaded
                   </h2>
 
-                  <p className="mt-1 text-slate-600">
+                  <p className="mt-1 text-[var(--foreground)] opacity-80">
                     Upload a dataset from the AI Generator page to populate
                     your dashboard with real data.
                   </p>
@@ -149,11 +149,11 @@ export default function Home() {
               <section className="mb-8">
 
                 <div className="mb-5">
-                  <h2 className="text-2xl font-bold text-slate-800">
+                  <h2 className="text-2xl font-bold text-[var(--foreground)]">
                     Dataset Overview
                   </h2>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-[var(--foreground)] opacity-70">
                     Live information retrieved from the MetricMind backend.
                   </p>
                 </div>
@@ -202,16 +202,16 @@ export default function Home() {
               </section>
 
               {/* Dataset Quality */}
-              <section className="mb-8 rounded-2xl bg-white p-6 shadow-md">
+              <section className="mb-8 rounded-2xl bg-[var(--card-background)] p-6 shadow-md">
 
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-800">
+                    <h2 className="text-xl font-semibold text-[var(--foreground)]">
                       Dataset Quality
                     </h2>
 
-                    <p className="mt-2 text-slate-600">
+                    <p className="mt-2 text-[var(--foreground)] opacity-80">
                       {dashboardData.dataset_quality}
                     </p>
                   </div>
@@ -224,32 +224,32 @@ export default function Home() {
 
                 <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
 
-                  <div className="rounded-xl bg-slate-50 p-4">
-                    <p className="text-sm text-slate-500">
+                  <div className="rounded-xl bg-[var(--background)] p-4">
+                    <p className="text-sm text-[var(--foreground)] opacity-70">
                       Missing Values
                     </p>
 
-                    <p className="mt-1 text-2xl font-bold text-slate-800">
+                    <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
                       {dashboardData.missing_values_total}
                     </p>
                   </div>
 
-                  <div className="rounded-xl bg-slate-50 p-4">
-                    <p className="text-sm text-slate-500">
+                  <div className="rounded-xl bg-[var(--background)] p-4">
+                    <p className="text-sm text-[var(--foreground)] opacity-70">
                       Duplicate Rows
                     </p>
 
-                    <p className="mt-1 text-2xl font-bold text-slate-800">
+                    <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
                       {dashboardData.duplicate_rows}
                     </p>
                   </div>
 
-                  <div className="rounded-xl bg-slate-50 p-4">
-                    <p className="text-sm text-slate-500">
+                  <div className="rounded-xl bg-[var(--background)] p-4">
+                    <p className="text-sm text-[var(--foreground)] opacity-70">
                       Available Charts
                     </p>
 
-                    <p className="mt-1 text-2xl font-bold text-slate-800">
+                    <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
                       {dashboardData.available_charts.length}
                     </p>
                   </div>
@@ -259,9 +259,9 @@ export default function Home() {
               </section>
 
               {/* Available Charts */}
-              <section className="mb-8 rounded-2xl bg-white p-6 shadow-md">
+              <section className="mb-8 rounded-2xl bg-[var(--card-background)] p-6 shadow-md">
 
-                <h2 className="text-xl font-semibold text-slate-800">
+                <h2 className="text-xl font-semibold text-[var(--foreground)]">
                   Available Visualizations
                 </h2>
 

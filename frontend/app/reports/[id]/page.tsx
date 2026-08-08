@@ -461,7 +461,7 @@ export default function ReportDetailsPage() {
 
           <Navbar />
 
-          <main className="min-h-screen bg-slate-100 p-8">
+          <main className="min-h-screen bg-[var(--background)] p-8">
 
             <div className="card rounded-2xl p-10 text-center shadow-md">
 
@@ -503,7 +503,7 @@ export default function ReportDetailsPage() {
 
           <Navbar />
 
-          <main className="min-h-screen bg-slate-100 p-8">
+          <main className="min-h-screen bg-[var(--background)] p-8">
 
             <Link
               href="/reports"
@@ -574,7 +574,7 @@ export default function ReportDetailsPage() {
         <Navbar />
 
 
-        <main className="min-h-screen bg-slate-100 p-8">
+        <main className="min-h-screen bg-[var(--background)] p-8">
 
 
           {/* ========================================
@@ -896,7 +896,7 @@ export default function ReportDetailsPage() {
 
                   <div
                     key={index}
-                    className="rounded-xl bg-slate-50 p-4"
+                    className="rounded-xl bg-[var(--background)] p-4"
                   >
 
                     <p>
@@ -1410,7 +1410,7 @@ export default function ReportDetailsPage() {
 
                 {/* Chart Image */}
 
-                <div className="mt-6 overflow-hidden rounded-xl border bg-white p-4">
+                <div className="mt-6 overflow-hidden rounded-xl border bg-[var(--card-background)] p-4">
 
                   <img
                     src={`http://127.0.0.1:8000/generated_charts/${generatedChart.filename}`}

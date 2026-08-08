@@ -39,13 +39,13 @@ export default function AnalyticsChart({
       {/* ============================= */}
 
       {numericColumns.length > 0 && (
-        <section className="rounded-2xl bg-white p-6 shadow-md">
+        <section className="rounded-2xl bg-[var(--card-background)] p-6 shadow-md">
 
-          <h2 className="text-2xl font-semibold text-slate-800">
+          <h2 className="text-2xl font-semibold text-[var(--foreground)]">
             Numeric Analysis
           </h2>
 
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-[var(--foreground)] opacity-70">
             Statistical summary of numeric columns in your dataset.
           </p>
 
@@ -100,7 +100,7 @@ export default function AnalyticsChart({
               return (
                 <div
                   key={column}
-                  className="rounded-xl border border-slate-200 p-4"
+                  className="rounded-xl border border-[var(--border-color)] p-4"
                 >
                   <ReactECharts
                     option={chartOptions}
@@ -112,8 +112,8 @@ export default function AnalyticsChart({
 
                   <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
 
-                    <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs text-slate-500">
+                    <div className="rounded-lg bg-[var(--background)] p-3">
+                      <p className="text-xs text-[var(--foreground)] opacity-70">
                         Mean
                       </p>
                       <p className="font-semibold">
@@ -121,8 +121,8 @@ export default function AnalyticsChart({
                       </p>
                     </div>
 
-                    <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs text-slate-500">
+                    <div className="rounded-lg bg-[var(--background)] p-3">
+                      <p className="text-xs text-[var(--foreground)] opacity-70">
                         Median
                       </p>
                       <p className="font-semibold">
@@ -130,8 +130,8 @@ export default function AnalyticsChart({
                       </p>
                     </div>
 
-                    <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs text-slate-500">
+                    <div className="rounded-lg bg-[var(--background)] p-3">
+                      <p className="text-xs text-[var(--foreground)] opacity-70">
                         Minimum
                       </p>
                       <p className="font-semibold">
@@ -139,8 +139,8 @@ export default function AnalyticsChart({
                       </p>
                     </div>
 
-                    <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs text-slate-500">
+                    <div className="rounded-lg bg-[var(--background)] p-3">
+                      <p className="text-xs text-[var(--foreground)] opacity-70">
                         Maximum
                       </p>
                       <p className="font-semibold">
@@ -165,13 +165,13 @@ export default function AnalyticsChart({
       {/* ============================= */}
 
       {categoricalColumns.length > 0 && (
-        <section className="rounded-2xl bg-white p-6 shadow-md">
+        <section className="rounded-2xl bg-[var(--card-background)] p-6 shadow-md">
 
-          <h2 className="text-2xl font-semibold text-slate-800">
+          <h2 className="text-2xl font-semibold text-[var(--foreground)]">
             Categorical Analysis
           </h2>
 
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-[var(--foreground)] opacity-70">
             Summary of categorical columns in your dataset.
           </p>
 
@@ -227,7 +227,7 @@ export default function AnalyticsChart({
               return (
                 <div
                   key={column}
-                  className="rounded-xl border border-slate-200 p-4"
+                  className="rounded-xl border border-[var(--border-color)] p-4"
                 >
 
                   <ReactECharts
@@ -240,8 +240,8 @@ export default function AnalyticsChart({
 
                   <div className="mt-4 grid grid-cols-2 gap-4">
 
-                    <div className="rounded-lg bg-slate-50 p-4">
-                      <p className="text-sm text-slate-500">
+                    <div className="rounded-lg bg-[var(--background)] p-4">
+                      <p className="text-sm text-[var(--foreground)] opacity-70">
                         Unique Values
                       </p>
 
@@ -250,8 +250,8 @@ export default function AnalyticsChart({
                       </p>
                     </div>
 
-                    <div className="rounded-lg bg-slate-50 p-4">
-                      <p className="text-sm text-slate-500">
+                    <div className="rounded-lg bg-[var(--background)] p-4">
+                      <p className="text-sm text-[var(--foreground)] opacity-70">
                         Most Frequent
                       </p>
 
