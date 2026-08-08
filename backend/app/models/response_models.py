@@ -1,9 +1,9 @@
 """Pydantic models for API response payloads."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 
 
 class ChatResponse(BaseModel):
@@ -118,6 +118,11 @@ class ReportGenerationResponse(BaseModel):
     charts_available: list[str]
     status: str
 
+    @field_serializer("generated_at", when_used="json")
+    def serialize_generated_at(self, generated_at: datetime) -> str:
+        """Serialize report timestamps in UTC."""
+        return generated_at.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
 
 class ReportMetadata(BaseModel):
     """Lightweight metadata describing a generated report."""
@@ -126,6 +131,11 @@ class ReportMetadata(BaseModel):
     generated_at: datetime
     status: str
     dataset_quality: str
+
+    @field_serializer("generated_at", when_used="json")
+    def serialize_generated_at(self, generated_at: datetime) -> str:
+        """Serialize report timestamps in UTC."""
+        return generated_at.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 class ReportsListResponse(BaseModel):

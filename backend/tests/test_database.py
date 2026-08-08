@@ -9,10 +9,14 @@ from app.database import SessionLocal, engine, get_database_session
 
 def test_database_configuration_uses_postgresql_psycopg_url() -> None:
     """The configured database URL targets PostgreSQL through psycopg."""
-    url = make_url(settings.DATABASE_URL)
+    application_url = make_url(settings.DATABASE_URL)
 
-    assert url.drivername == "postgresql+psycopg"
-    assert settings.TEST_DATABASE_URL == settings.DATABASE_URL
+    assert application_url.drivername == "postgresql+psycopg"
+    assert settings.TEST_DATABASE_URL is not None
+
+    test_url = make_url(settings.TEST_DATABASE_URL)
+    assert test_url.drivername == "postgresql+psycopg"
+    assert test_url.database != application_url.database
 
 
 def test_session_factory_creates_a_synchronous_session() -> None:
