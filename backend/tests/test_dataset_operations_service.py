@@ -75,6 +75,18 @@ def test_calculate_sum_with_categorical_filter(sales_dataset: None) -> None:
     assert result.rows_affected == 2
 
 
+def test_calculate_sum_grouped_by_category_uses_full_dataset(sales_dataset: None) -> None:
+    result = calculate_metric("SUM", "Sales", group_by="Category")
+
+    assert result.result is None
+    assert result.group_by == "Category"
+    assert [(item.group, item.result, item.rows_affected) for item in result.grouped_results] == [
+        ("Technology", 400.0, 2),
+        ("Furniture", 200.0, 1),
+        ("Office Supplies", 50.0, 1),
+    ]
+
+
 @pytest.mark.parametrize(
     ("operation", "column", "detail"),
     [

@@ -30,14 +30,13 @@ from app.models.response_models import (
     UploadResponse,
     UserResponse,
 )
-from app.services.ai_service import generate_response
+from app.services import ai_service, semantic_service
 from app.services.analytics_service import generate_analytics_summary
 from app.services.chart_service import generate_chart
 from app.services.dashboard_service import generate_dashboard_summary
 from app.services.jwt_service import create_access_token, verify_access_token
 from app.services.report_service import generate_report
 from app.services.report_storage_service import get_all_report_metadata, get_report
-from app.services.semantic_service import process_question
 from app.services.upload_service import process_upload
 from app.services.user_service import (
     authenticate_user,
@@ -69,8 +68,8 @@ async def health_check() -> Dict[str, str]:
 async def chat(request: ChatRequest) -> ChatResponse:
     """Return a response to the submitted chat question."""
     logger.info("Received chat request")
-    processed_question = process_question(request.question)
-    response = generate_response(processed_question)
+    processed_question = semantic_service.process_question(request.question)
+    response = ai_service.generate_response(processed_question)
     logger.info("Chat response generated successfully")
     return ChatResponse(response=response)
 

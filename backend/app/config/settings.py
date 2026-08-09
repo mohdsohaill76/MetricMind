@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     CHART_RETENTION_HOURS: int = 24
     DATABASE_URL: str
     TEST_DATABASE_URL: str | None = None
+    GROQ_API_KEY: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

@@ -23,6 +23,17 @@ class MetricCalculation:
     operation: str
     column: str | None
     filters: dict[str, Any]
+    result: int | float | None
+    rows_affected: int
+    group_by: str | None = None
+    grouped_results: tuple["GroupedMetricResult", ...] = ()
+
+
+@dataclass(frozen=True)
+class GroupedMetricResult:
+    """One verified aggregation result within a grouping column."""
+
+    group: Any
     result: int | float
     rows_affected: int
 
@@ -31,22 +42,35 @@ def calculate_metric(
     operation: str,
     column: str | None = None,
     filters: Mapping[str, Any] | None = None,
+    group_by: str | None = None,
 ) -> MetricCalculation:
     """Calculate a supported metric against the full shared dataset.
 
     ``COUNT`` counts rows and does not require a column. The remaining operations
     require a numeric column. Filters are simple equality comparisons combined
-    with logical AND.
+    with logical AND. ``group_by`` produces one verified result for each value of
+    an uploaded dataset column.
     """
     dataset = _get_dataset()
     normalized_operation = _validate_operation(operation)
     normalized_filters = dict(filters or {})
     _validate_filter_columns(dataset, normalized_filters)
+    normalized_group_by = _validate_group_by_column(dataset, group_by)
 
     filtered_dataset = _apply_filters(dataset, normalized_filters)
     rows_affected = len(filtered_dataset)
 
     if normalized_operation == "COUNT":
+        if normalized_group_by is not None:
+            return MetricCalculation(
+                operation=normalized_operation,
+                column=None,
+                filters=normalized_filters,
+                result=None,
+                rows_affected=rows_affected,
+                group_by=normalized_group_by,
+                grouped_results=_calculate_grouped_count(filtered_dataset, normalized_group_by),
+            )
         return MetricCalculation(
             operation=normalized_operation,
             column=None,
@@ -58,6 +82,19 @@ def calculate_metric(
     numeric_column = _validate_numeric_column(dataset, column)
     if filtered_dataset.empty:
         raise HTTPException(status_code=400, detail="No rows match the provided filters.")
+
+    if normalized_group_by is not None:
+        return MetricCalculation(
+            operation=normalized_operation,
+            column=numeric_column,
+            filters=normalized_filters,
+            result=None,
+            rows_affected=rows_affected,
+            group_by=normalized_group_by,
+            grouped_results=_calculate_grouped_metric(
+                normalized_operation, filtered_dataset, numeric_column, normalized_group_by
+            ),
+        )
 
     values = filtered_dataset[numeric_column].dropna()
     if values.empty:
@@ -103,6 +140,17 @@ def _validate_filter_columns(dataframe: pd.DataFrame, filters: Mapping[str, Any]
             raise HTTPException(status_code=400, detail=f"Unknown filter column: {filter_column}.")
 
 
+def _validate_group_by_column(dataframe: pd.DataFrame, group_by: str | None) -> str | None:
+    """Ensure an optional grouping column names an uploaded dataset column."""
+    if group_by is None:
+        return None
+    if not isinstance(group_by, str) or not group_by:
+        raise HTTPException(status_code=400, detail="A grouping column must be provided.")
+    if group_by not in dataframe.columns:
+        raise HTTPException(status_code=400, detail=f"Unknown grouping column: {group_by}.")
+    return group_by
+
+
 def _apply_filters(dataframe: pd.DataFrame, filters: Mapping[str, Any]) -> pd.DataFrame:
     """Apply simple equality filters to a dataset."""
     filtered_dataframe = dataframe
@@ -138,3 +186,40 @@ def _calculate(operation: str, values: pd.Series) -> float:
         return float(values.max())
 
     raise AssertionError(f"Unexpected supported operation: {operation}")
+
+
+def _calculate_grouped_count(
+    dataframe: pd.DataFrame, group_by: str
+) -> tuple[GroupedMetricResult, ...]:
+    """Count all filtered rows in each group, including rows with null group values."""
+    return tuple(
+        GroupedMetricResult(group=group, result=len(group_frame), rows_affected=len(group_frame))
+        for group, group_frame in dataframe.groupby(group_by, dropna=False, sort=False)
+    )
+
+
+def _calculate_grouped_metric(
+    operation: str,
+    dataframe: pd.DataFrame,
+    column: str,
+    group_by: str,
+) -> tuple[GroupedMetricResult, ...]:
+    """Aggregate valid numeric values from the full filtered dataset for each group."""
+    grouped_results: list[GroupedMetricResult] = []
+    for group, group_frame in dataframe.groupby(group_by, dropna=False, sort=False):
+        values = group_frame[column].dropna()
+        if not values.empty:
+            grouped_results.append(
+                GroupedMetricResult(
+                    group=group,
+                    result=_calculate(operation, values),
+                    rows_affected=len(group_frame),
+                )
+            )
+
+    if not grouped_results:
+        raise HTTPException(
+            status_code=400,
+            detail="No numeric values are available for the requested calculation.",
+        )
+    return tuple(grouped_results)

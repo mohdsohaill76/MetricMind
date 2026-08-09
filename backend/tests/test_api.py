@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.services import dataset_service
 from app.services import chart_service
+from app.services import ai_service
 from app.services.user_service import clear_users
 from tests.auth_helpers import build_bearer_headers
 
@@ -61,12 +62,43 @@ def _authorization_header() -> dict[str, str]:
     return build_bearer_headers(client, **TEST_USER_PAYLOAD)
 
 
-def test_chat_accepts_valid_question() -> None:
-    """A non-empty question within the length limit is accepted."""
+def test_chat_accepts_valid_question(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A non-empty question is sent through the semantic and AI services."""
+    received_inputs: list[str] = []
+
+    class AgentChain:
+        def invoke(self, values: dict[str, str]) -> object:
+            received_inputs.append(values["input"])
+            return type("Response", (), {"content": "Retention is trending upward."})()
+
+    monkeypatch.setattr(ai_service, "_get_agent_chain", lambda: AgentChain())
     response = client.post("/api/v1/chat", json={"question": "How is retention trending?"})
 
     assert response.status_code == 200
-    assert response.json() == {"response": "MetricMind AI is under development."}
+    assert response.json() == {"response": "Retention is trending upward."}
+    assert received_inputs == ["How is retention trending?"]
+
+
+def test_chat_grounds_a_dataset_question_before_langchain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Chat passes the shared dataset's semantic context to the LangChain service."""
+    dataset_service.set_dataset(pd.DataFrame({"region": ["East"], "sales": [125]}))
+    received_inputs: list[str] = []
+
+    class AgentChain:
+        def invoke(self, values: dict[str, str]) -> object:
+            received_inputs.append(values["input"])
+            return type("Response", (), {"content": "East sales are 125."})()
+
+    monkeypatch.setattr(ai_service, "_get_agent_chain", lambda: AgentChain())
+    response = client.post("/api/v1/chat", json={"question": "What are East sales?"})
+
+    assert response.status_code == 200
+    assert response.json() == {"response": "East sales are 125."}
+    assert len(received_inputs) == 1
+    assert "Semantic layer context" in received_inputs[0]
+    assert '"sales": 125' in received_inputs[0]
 
 
 @pytest.mark.parametrize(
