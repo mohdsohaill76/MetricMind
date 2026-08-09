@@ -148,8 +148,8 @@ async def analytics_summary(user: AuthenticatedUser) -> AnalyticsSummaryResponse
     response_model=ReportGenerationResponse,
     summary="Generate a business report from the uploaded dataset",
     description=(
-        "Build a deterministic, structured business report from the shared dataset. "
-        "This endpoint does not call an external AI service yet."
+        "Build an AI-powered, structured business report from the shared dataset. "
+        "This endpoint uses LangChain and Groq to generate dynamic executive insights and recommendations."
     ),
 )
 async def generate_ai_report(

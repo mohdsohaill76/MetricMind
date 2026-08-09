@@ -20,8 +20,16 @@ def clear_shared_dataset() -> Generator[None, None, None]:
     dataset_service.clear_dataset()
 
 
-def test_generate_report_builds_expected_summary() -> None:
-    """The service returns stable insights for a shared dataset."""
+def test_generate_report_builds_expected_summary(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The service returns stable insights for a shared dataset when AI is not available."""
+    def mock_generate_report_insights(*args, **kwargs):
+        raise Exception("AI unavailable")
+
+    monkeypatch.setattr(
+        "app.services.ai_service.generate_report_insights",
+        mock_generate_report_insights,
+    )
+
     csv_contents = (
         "region,sales,margin,notes\n"
         "North,100,0.20,\n"
@@ -44,6 +52,37 @@ def test_generate_report_builds_expected_summary() -> None:
     assert report.key_insights[0] == "Dataset contains 4 rows and 4 columns."
     assert report.key_insights[-1] == "Requested focus area: margin analysis."
     assert report.charts_available == ["histogram", "box", "bar", "line", "scatter"]
+    assert report.status == "completed"
+
+
+def test_generate_report_uses_ai_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The service calls the AI generation helper and returns the dynamic insights."""
+    def mock_generate_report_insights(summary, focus=None):
+        assert focus == "margin analysis"
+        return {
+            "key_insights": ["AI Insight 1", "AI Insight 2"],
+            "recommendations": ["AI Rec 1", "AI Rec 2"],
+        }
+
+    monkeypatch.setattr(
+        "app.services.ai_service.generate_report_insights",
+        mock_generate_report_insights,
+    )
+
+    csv_contents = (
+        "region,sales,margin,notes\n"
+        "North,100,0.20,\n"
+        "North,100,0.20,\n"
+        "South,150,0.35,Stable\n"
+        "West,200,0.40,\n"
+    )
+    dataset_service.set_dataset(pd.read_csv(StringIO(csv_contents)))
+
+    report = generate_report(ReportGenerationRequest(report_focus="margin analysis"))
+
+    assert report.report_id.startswith("report-")
+    assert report.key_insights == ["AI Insight 1", "AI Insight 2"]
+    assert report.recommendations == ["AI Rec 1", "AI Rec 2"]
     assert report.status == "completed"
 
 

@@ -8,6 +8,8 @@ from typing import Any, Callable
 
 from fastapi import HTTPException, status
 
+from pydantic import BaseModel, Field
+
 from app.config.settings import settings
 from app.services.dataset_operations_service import calculate_metric
 
@@ -171,3 +173,84 @@ def generate_response(question: str) -> str:
     response = _get_agent_chain().invoke({"input": question})
     content = getattr(response, "content", response)
     return str(content)
+
+
+class ReportInsights(BaseModel):
+    """Structured insights and recommendations for the business report."""
+
+    key_insights: list[str] = Field(
+        ...,
+        description="A list of executive key insights extracted from the dataset summary and quality metrics.",
+    )
+    recommendations: list[str] = Field(
+        ...,
+        description="A list of actionable next-step recommendations for the business.",
+    )
+
+
+def generate_report_insights(
+    dataset_summary: dict[str, Any],
+    focus: str | None = None,
+) -> dict[str, list[str]]:
+    """Generate AI-powered insights and recommendations for the business report."""
+    try:
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_groq import ChatGroq
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="MetricMind AI dependencies are not installed.",
+        ) from exc
+
+    if not settings.GROQ_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="MetricMind AI is not configured. Set GROQ_API_KEY to generate report.",
+        )
+
+    try:
+        llm = ChatGroq(
+            model="llama-3.3-70b-versatile",
+            temperature=0,
+            groq_api_key=settings.GROQ_API_KEY,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="MetricMind AI is not configured. Set GROQ_API_KEY to generate report.",
+        ) from exc
+
+    structured_llm = llm.with_structured_output(ReportInsights)
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are the MetricMind AI Agent. Analyze the provided dataset summary "
+                "and quality metrics. Generate key executive insights (at least 3 insights) "
+                "and actionable business recommendations (at least 3 recommendations). "
+                "The insights must highlight interesting attributes of the dataset "
+                "like its size, missing values, duplicates, and column distributions. "
+                "If the user specifies a particular focus area, customize the insights "
+                "and recommendations to address that focus area.",
+            ),
+            (
+                "user",
+                "Dataset Summary:\n{dataset_summary}\n\n"
+                "User Focus Area: {focus}\n",
+            ),
+        ]
+    )
+
+    chain = prompt | structured_llm
+    result = chain.invoke(
+        {
+            "dataset_summary": json.dumps(dataset_summary, default=str),
+            "focus": focus or "General analysis",
+        }
+    )
+
+    return {
+        "key_insights": result.key_insights,
+        "recommendations": result.recommendations,
+    }

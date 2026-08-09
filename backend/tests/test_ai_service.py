@@ -234,3 +234,63 @@ def test_generate_response_uses_existing_agent_chain(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(ai_service, "_get_agent_chain", lambda: Agent())
 
     assert ai_service.generate_response("How is retention trending?") == "Retention is improving."
+
+
+def test_generate_report_insights_calls_groq_and_returns_structured_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    """generate_report_insights uses ChatGroq with structured output and returns the parsed dict."""
+    monkeypatch.setattr(ai_service.settings, "GROQ_API_KEY", "mock-groq-key")
+
+    from langchain_core.runnables import Runnable
+
+    class MockStructuredLLM(Runnable):
+        def invoke(self, inputs: Any, config: Any = None, **kwargs: Any) -> Any:
+            return ai_service.ReportInsights(
+                key_insights=["Mocked AI Insight"],
+                recommendations=["Mocked AI Recommendation"]
+            )
+
+    class MockChatGroq:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def with_structured_output(self, schema: Any) -> Any:
+            assert schema is ai_service.ReportInsights
+            return MockStructuredLLM()
+
+    import sys
+    from types import ModuleType
+
+    # Save original modules
+    orig_langchain_groq = sys.modules.get("langchain_groq")
+    orig_langchain_core_prompts = sys.modules.get("langchain_core.prompts")
+
+    try:
+        # Create mock langchain_groq module
+        mock_langchain_groq = ModuleType("langchain_groq")
+        mock_langchain_groq.ChatGroq = MockChatGroq
+        sys.modules["langchain_groq"] = mock_langchain_groq
+
+        # Create mock langchain_core.prompts module
+        from langchain_core.prompts import ChatPromptTemplate
+        mock_langchain_core_prompts = ModuleType("langchain_core.prompts")
+        mock_langchain_core_prompts.ChatPromptTemplate = ChatPromptTemplate
+        sys.modules["langchain_core.prompts"] = mock_langchain_core_prompts
+
+        summary = {"shape": {"rows": 100, "columns": 5}}
+        result = ai_service.generate_report_insights(summary, "test focus")
+
+        assert result == {
+            "key_insights": ["Mocked AI Insight"],
+            "recommendations": ["Mocked AI Recommendation"]
+        }
+    finally:
+        # Restore original modules
+        if orig_langchain_groq is not None:
+            sys.modules["langchain_groq"] = orig_langchain_groq
+        else:
+            sys.modules.pop("langchain_groq", None)
+
+        if orig_langchain_core_prompts is not None:
+            sys.modules["langchain_core.prompts"] = orig_langchain_core_prompts
+        else:
+            sys.modules.pop("langchain_core.prompts", None)

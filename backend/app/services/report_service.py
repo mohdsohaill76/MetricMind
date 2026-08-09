@@ -40,8 +40,19 @@ def generate_report(
         raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
 
     dataset_summary, dataset_quality = _build_report_dataset_details(profile)
-    key_insights = _build_key_insights(dataset_summary, request)
-    recommendations = _build_recommendations(dataset_summary)
+
+    try:
+        from app.services.ai_service import generate_report_insights
+        focus = request.report_focus if request else None
+        ai_insights = generate_report_insights(dataset_summary.model_dump(mode="json"), focus)
+        key_insights = ai_insights["key_insights"]
+        recommendations = ai_insights["recommendations"]
+    except Exception as exc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("AI report generation failed, falling back to deterministic summary: %s", exc)
+        key_insights = _build_key_insights(dataset_summary, request)
+        recommendations = _build_recommendations(dataset_summary)
 
     report = ReportGenerationResponse(
         report_id=_build_report_id(dataset),
