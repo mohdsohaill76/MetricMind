@@ -251,7 +251,8 @@ def test_generate_report_insights_calls_groq_and_returns_structured_output(monke
 
     class MockChatGroq:
         def __init__(self, *args, **kwargs) -> None:
-            pass
+            assert kwargs["request_timeout"] == ai_service.REPORT_INSIGHTS_TIMEOUT_SECONDS
+            assert kwargs["max_retries"] == 0
 
         def with_structured_output(self, schema: Any) -> Any:
             assert schema is ai_service.ReportInsights

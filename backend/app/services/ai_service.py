@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from typing import Any, Callable
+from typing import Any, Callable, Final
 
 from fastapi import HTTPException, status
 
@@ -12,6 +12,9 @@ from pydantic import BaseModel, Field
 
 from app.config.settings import settings
 from app.services.dataset_operations_service import calculate_metric
+
+
+REPORT_INSIGHTS_TIMEOUT_SECONDS: Final[float] = 30.0
 
 
 def calculate_dataset_metric(
@@ -123,8 +126,11 @@ def _get_agent_chain():
             (
                 "system",
                 "You are the MetricMind AI Agent. Answer the user's question using the "
-                "provided semantic-layer dataset context when it is available. For any "
-                "question that requires an exact dataset value, use the "
+                "provided semantic-layer dataset context when it is available. For greetings, "
+                "small talk, or general conversational questions such as 'hello', 'hi', "
+                "'how are you?', or 'who are you?', respond directly and politely as the "
+                "MetricMind AI Assistant. Do NOT invoke any dataset analysis tool for these "
+                "messages. For any question that requires an exact dataset value, use the "
                 "calculate_dataset_metric tool. Never calculate from sample rows or "
                 "invent totals, averages, counts, minimums, or maximums. If the tool "
                 "cannot provide the requested value, explain that clearly. For a "
@@ -213,6 +219,8 @@ def generate_report_insights(
             model="llama-3.3-70b-versatile",
             temperature=0,
             groq_api_key=settings.GROQ_API_KEY,
+            request_timeout=REPORT_INSIGHTS_TIMEOUT_SECONDS,
+            max_retries=0,
         )
     except Exception as exc:
         raise HTTPException(

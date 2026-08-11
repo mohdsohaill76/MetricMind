@@ -49,7 +49,7 @@ def _build_upload_response(file: BinaryIO, filename: str) -> UploadResponse:
         dataframe.head(10).to_json(orient="records")
     )
 
-    set_dataset(dataframe)
+    set_dataset(dataframe, filename)
     profile = get_dataset_profile()
 
     return UploadResponse(

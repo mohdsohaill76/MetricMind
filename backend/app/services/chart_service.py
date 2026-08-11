@@ -148,7 +148,10 @@ def _render_chart(
     figure, axis = plt.subplots(figsize=(8, 5))
     try:
         if chart_type == "bar":
-            axis.bar(dataframe[x_column].astype(str), dataframe[y_column].astype(float))
+            grouped_values = dataframe.groupby(x_column, dropna=False, sort=False)[
+                y_column
+            ].sum()
+            axis.bar(grouped_values.index.astype(str), grouped_values.astype(float))
         elif chart_type == "line":
             axis.plot(dataframe[x_column], dataframe[y_column], marker="o")
         elif chart_type == "scatter":

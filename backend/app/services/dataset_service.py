@@ -11,13 +11,15 @@ from app.models.response_models import UploadProfile
 
 _DATASET: pd.DataFrame | None = None
 _DATASET_PROFILE: UploadProfile | None = None
+_DATASET_FILENAME: str = "dataset.csv"
 _EMPTY_DATASET: Final[pd.DataFrame] = pd.DataFrame()
 
 
-def set_dataset(dataframe: pd.DataFrame) -> None:
+def set_dataset(dataframe: pd.DataFrame, filename: str = "dataset.csv") -> None:
     """Store a copy of the most recently uploaded dataset and its profile."""
-    global _DATASET, _DATASET_PROFILE
+    global _DATASET, _DATASET_PROFILE, _DATASET_FILENAME
     _DATASET = dataframe.copy(deep=True)
+    _DATASET_FILENAME = filename
     _DATASET_PROFILE = build_dataset_profile(_DATASET)
 
 
@@ -31,9 +33,10 @@ def get_dataset() -> pd.DataFrame:
 
 def clear_dataset() -> None:
     """Remove the stored dataset."""
-    global _DATASET, _DATASET_PROFILE
+    global _DATASET, _DATASET_PROFILE, _DATASET_FILENAME
     _DATASET = None
     _DATASET_PROFILE = None
+    _DATASET_FILENAME = "dataset.csv"
 
 
 def has_dataset() -> bool:
@@ -47,6 +50,35 @@ def get_dataset_profile() -> UploadProfile | None:
         return None
 
     return _DATASET_PROFILE.model_copy(deep=True)
+
+
+def get_current_dataset_details() -> UploadResponse:
+    """Return the preview and profile for the currently uploaded dataset."""
+    import json
+    from typing import Any
+    from fastapi import HTTPException
+    from app.models.response_models import UploadResponse
+
+    if not has_dataset():
+        raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
+
+    profile = get_dataset_profile()
+    if profile is None:
+        raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
+
+    dataset = get_dataset()
+    preview: list[dict[str, Any]] = json.loads(
+        dataset.head(10).to_json(orient="records")
+    )
+
+    return UploadResponse(
+        filename=_DATASET_FILENAME,
+        rows=profile.shape["rows"],
+        columns=profile.shape["columns"],
+        column_names=[str(column) for column in dataset.columns],
+        preview=preview,
+        profile=profile,
+    )
 
 
 def build_dataset_profile(dataframe: pd.DataFrame) -> UploadProfile:

@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from fastapi import HTTPException
 
-from app.models.request_models import ReportGenerationRequest
+from app.models.request_models import ChartGenerationRequest, ReportGenerationRequest
 from app.services import dataset_service
 from app.services.report_service import generate_report
 
@@ -28,6 +28,11 @@ def test_generate_report_builds_expected_summary(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(
         "app.services.ai_service.generate_report_insights",
         mock_generate_report_insights,
+    )
+    generated_chart_requests: list[ChartGenerationRequest] = []
+    monkeypatch.setattr(
+        "app.services.report_service.generate_chart",
+        generated_chart_requests.append,
     )
 
     csv_contents = (
@@ -51,7 +56,18 @@ def test_generate_report_builds_expected_summary(monkeypatch: pytest.MonkeyPatch
     )
     assert report.key_insights[0] == "Dataset contains 4 rows and 4 columns."
     assert report.key_insights[-1] == "Requested focus area: margin analysis."
-    assert report.charts_available == ["histogram", "box", "bar", "line", "scatter"]
+    assert report.charts_available == ["histogram", "box", "bar", "scatter"]
+    assert len(generated_chart_requests) == 4
+    assert len({
+        (chart.chart_type, chart.x_column, chart.y_column)
+        for chart in generated_chart_requests
+    }) == len(generated_chart_requests)
+    assert generated_chart_requests == [
+        ChartGenerationRequest(chart_type="histogram", x_column="sales"),
+        ChartGenerationRequest(chart_type="box", x_column="region", y_column="sales"),
+        ChartGenerationRequest(chart_type="bar", x_column="region", y_column="sales"),
+        ChartGenerationRequest(chart_type="scatter", x_column="sales", y_column="margin"),
+    ]
     assert report.status == "completed"
 
 
@@ -93,3 +109,36 @@ def test_generate_report_requires_dataset() -> None:
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "No dataset has been uploaded."
+
+
+def test_report_charts_prefer_low_cardinality_category(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Report grouped charts must not use an identifier column as their category."""
+    monkeypatch.setattr(
+        "app.services.ai_service.generate_report_insights",
+        lambda *args, **kwargs: {"key_insights": ["AI"], "recommendations": ["AI"]},
+    )
+    generated_chart_requests: list[ChartGenerationRequest] = []
+    monkeypatch.setattr(
+        "app.services.report_service.generate_chart",
+        generated_chart_requests.append,
+    )
+    dataset_service.set_dataset(
+        pd.DataFrame(
+            {
+                "order_id": [f"order-{index}" for index in range(100)],
+                "region": ["North", "South"] * 50,
+                "sales": range(100),
+            }
+        )
+    )
+
+    generate_report()
+
+    grouped_requests = [
+        request
+        for request in generated_chart_requests
+        if request.chart_type in {"box", "bar"}
+    ]
+    assert [request.x_column for request in grouped_requests] == ["region", "region"]

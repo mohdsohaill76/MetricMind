@@ -34,6 +34,7 @@ from app.services import ai_service, semantic_service
 from app.services.analytics_service import generate_analytics_summary
 from app.services.chart_service import generate_chart
 from app.services.dashboard_service import generate_dashboard_summary
+from app.services.dataset_service import get_current_dataset_details
 from app.services.jwt_service import create_access_token, verify_access_token
 from app.services.report_service import generate_report
 from app.services.report_storage_service import get_all_report_metadata, get_report
@@ -152,7 +153,7 @@ async def analytics_summary(user: AuthenticatedUser) -> AnalyticsSummaryResponse
         "This endpoint uses LangChain and Groq to generate dynamic executive insights and recommendations."
     ),
 )
-async def generate_ai_report(
+def generate_ai_report(
     user: AuthenticatedUser,
     request: ReportGenerationRequest | None = None,
 ) -> ReportGenerationResponse:
@@ -278,3 +279,14 @@ async def upload_csv(
 ) -> UploadResponse:
     """Return a preview of an uploaded CSV dataset."""
     return await process_upload(file)
+
+
+@router.get(
+    "/dataset",
+    response_model=UploadResponse,
+    summary="Get current uploaded dataset profile",
+    description="Return details, preview, and column metadata for the currently uploaded dataset.",
+)
+async def get_current_dataset(user: AuthenticatedUser) -> UploadResponse:
+    """Return details and preview for the currently uploaded dataset."""
+    return get_current_dataset_details()

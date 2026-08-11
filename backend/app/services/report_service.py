@@ -9,7 +9,7 @@ from typing import Final
 import pandas as pd
 from fastapi import HTTPException
 
-from app.models.request_models import ReportGenerationRequest
+from app.models.request_models import ChartGenerationRequest, ReportGenerationRequest
 from app.models.response_models import (
     ReportDatasetSummary,
     ReportGenerationResponse,
@@ -21,6 +21,7 @@ from app.services.dataset_service import (
     get_dataset_profile,
     has_dataset,
 )
+from app.services.chart_service import generate_chart
 from app.services.report_storage_service import save_report
 
 
@@ -40,6 +41,12 @@ def generate_report(
         raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
 
     dataset_summary, dataset_quality = _build_report_dataset_details(profile)
+    report_id = _build_report_id(dataset)
+    # Chart generation obtains its own temporary dataset copy from the shared service.
+    # The report copy is only needed for the deterministic identifier.
+    del dataset
+    chart_requests = _build_report_chart_requests(dataset_summary)
+    _generate_report_charts(chart_requests)
 
     try:
         from app.services.ai_service import generate_report_insights
@@ -55,12 +62,12 @@ def generate_report(
         recommendations = _build_recommendations(dataset_summary)
 
     report = ReportGenerationResponse(
-        report_id=_build_report_id(dataset),
+        report_id=report_id,
         generated_at=datetime.now(UTC),
         dataset_summary=dataset_summary,
         key_insights=key_insights,
         recommendations=recommendations,
-        charts_available=_build_available_charts(dataset_summary),
+        charts_available=[request.chart_type for request in chart_requests],
         status="completed",
     )
     stored_report = report.model_dump(mode="json")
@@ -180,6 +187,91 @@ def _build_available_charts(summary: ReportDatasetSummary) -> list[str]:
         charts.extend(["bar", "line", "scatter"])
 
     return [chart for chart in SUPPORTED_CHART_TYPES if chart in charts]
+
+
+def _build_report_chart_requests(
+    summary: ReportDatasetSummary,
+) -> list[ChartGenerationRequest]:
+    """Choose the validated chart configurations generated with a report."""
+    numeric_columns = summary.numeric_columns
+    categorical_columns = summary.categorical_columns
+    requests: list[ChartGenerationRequest] = []
+
+    if numeric_columns:
+        requests.append(
+            ChartGenerationRequest(
+                chart_type="histogram",
+                x_column=numeric_columns[0],
+            )
+        )
+
+    if numeric_columns and categorical_columns:
+        category_column = _select_report_category_column(summary)
+        numeric_column = numeric_columns[0]
+        requests.extend(
+            [
+                ChartGenerationRequest(
+                    chart_type="box",
+                    x_column=category_column,
+                    y_column=numeric_column,
+                ),
+                ChartGenerationRequest(
+                    chart_type="bar",
+                    x_column=category_column,
+                    y_column=numeric_column,
+                ),
+            ]
+        )
+
+    if len(numeric_columns) >= 2:
+        requests.append(
+            ChartGenerationRequest(
+                chart_type="scatter",
+                x_column=numeric_columns[0],
+                y_column=numeric_columns[1],
+            )
+        )
+
+    return requests
+
+
+def _select_report_category_column(summary: ReportDatasetSummary) -> str:
+    """Choose the lowest-cardinality categorical column for grouped charts.
+
+    Report charts should compare meaningful groups. Selecting the first CSV
+    column can instead select an identifier (for example, an order ID), causing
+    matplotlib to create one box or bar per row. Sparse columns or columns
+    with only one distinct value are ignored.
+    """
+    if not summary.categorical_columns:
+        return ""
+
+    candidates = [
+        column
+        for column in summary.categorical_columns
+        if summary.missing_percentage.get(column, 0.0) < 50.0
+        and summary.unique_values.get(column, 0) > 1
+    ]
+
+    if not candidates:
+        candidates = summary.categorical_columns
+
+    return min(
+        candidates,
+        key=lambda column: summary.unique_values.get(column, float("inf")),
+    )
+
+
+def _generate_report_charts(requests: list[ChartGenerationRequest]) -> None:
+    """Generate report charts without failing a completed report for one chart error."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+    for request in requests:
+        try:
+            generate_chart(request)
+        except Exception as exc:
+            logger.warning("Report chart generation failed for %s: %s", request.chart_type, exc)
 
 
 def _build_report_id(dataframe: pd.DataFrame) -> str:
