@@ -1,0 +1,8 @@
+Sample API Response  {
+  "measures": [
+    "retail_sales.count"
+  ],
+  "dimensions": [
+    "retail_sales.customer_id"
+  ]
+}
