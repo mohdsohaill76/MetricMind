@@ -216,7 +216,7 @@ def generate_report_insights(
 
     try:
         llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             temperature=0,
             groq_api_key=settings.GROQ_API_KEY,
             request_timeout=REPORT_INSIGHTS_TIMEOUT_SECONDS,
