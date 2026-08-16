@@ -176,9 +176,17 @@ def generate_response(question: str) -> str:
     Returns:
         The generated response text.
     """
-    response = _get_agent_chain().invoke({"input": question})
-    content = getattr(response, "content", response)
-    return str(content)
+    try:
+        response = _get_agent_chain().invoke({"input": question})
+        content = getattr(response, "content", response)
+        return str(content)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"MetricMind AI service error: {exc}",
+        ) from exc
 
 
 class ReportInsights(BaseModel):
