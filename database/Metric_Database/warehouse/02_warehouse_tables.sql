@@ -1,0 +1,108 @@
+-- customer dimension table
+
+create table analytics.dim_customer
+(
+    customer_id int primary key,
+    customer_name varchar(100),
+    email varchar(100),
+    phone varchar(20),
+    city varchar(50),
+    country varchar(50),
+    customer_type varchar(50),
+    created_at timestamp
+);
+
+-- product dimension table
+
+create table analytics.dim_product
+(
+    product_id int primary key,
+    product_name varchar(100),
+    category varchar(50),
+    sub_category varchar(50),
+    brand varchar(50),
+    unit_price decimal(10,2),
+    cost_price decimal(10,2),
+    status varchar(20)
+);
+
+-- region dimension table
+
+create table analytics.dim_region
+(
+    region_id int primary key,
+    region_name varchar(50),
+    country varchar(50),
+    state varchar(50),
+    city varchar(50)
+);
+
+-- date dimension table
+
+create table analytics.dim_date
+(
+    date_id int primary key,
+    full_date date,
+    day int,
+    month int,
+    month_name varchar(20),
+    quarter int,
+    year int,
+    week int
+);
+
+-- salesperson dimension table
+
+create table analytics.dim_salesperson
+(
+    salesperson_id int primary key,
+    salesperson_name varchar(100),
+    department varchar(50),
+    designation varchar(50),
+    region varchar(50),
+    email varchar(100)
+);
+
+-- sales fact table
+
+create table analytics.fact_sales
+(
+    sale_id int primary key,
+
+    customer_id int,
+    product_id int,
+    region_id int,
+    date_id int,
+    salesperson_id int,
+
+    quantity int,
+    revenue decimal(12,2),
+    cost decimal(12,2),
+    discount decimal(10,2),
+    sales_channel varchar(20),
+
+    foreign key (customer_id) references analytics.dim_customer(customer_id),
+    foreign key (product_id) references analytics.dim_product(product_id),
+    foreign key (region_id) references analytics.dim_region(region_id),
+    foreign key (date_id) references analytics.dim_date(date_id),
+    foreign key (salesperson_id) references analytics.dim_salesperson(salesperson_id)
+);
+
+-- ==========================================
+-- ANALYTICS FACT SALES INDEXES
+-- ==========================================
+
+create index if not exists idx_analytics_fact_sales_customer
+on analytics.fact_sales(customer_id);
+
+create index if not exists idx_analytics_fact_sales_product
+on analytics.fact_sales(product_id);
+
+create index if not exists idx_analytics_fact_sales_region
+on analytics.fact_sales(region_id);
+
+create index if not exists idx_analytics_fact_sales_date
+on analytics.fact_sales(date_id);
+
+create index if not exists idx_analytics_fact_sales_salesperson
+on analytics.fact_sales(salesperson_id);

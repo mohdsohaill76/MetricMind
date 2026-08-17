@@ -1,0 +1,345 @@
+"""AI report generation service for MetricMind."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from hashlib import sha256
+from typing import Final
+
+import pandas as pd
+from fastapi import HTTPException
+
+from app.models.request_models import ChartGenerationRequest, ReportGenerationRequest
+from app.models.response_models import (
+    ReportDatasetSummary,
+    ReportGenerationResponse,
+    UploadProfile,
+)
+from app.services.dataset_service import (
+    build_dataset_profile,
+    get_dataset,
+    get_dataset_profile,
+    has_dataset,
+)
+from app.services.chart_service import generate_chart
+from app.services.report_storage_service import save_report
+
+
+SUPPORTED_CHART_TYPES: Final[list[str]] = ["histogram", "box", "bar", "line", "scatter"]
+
+
+def generate_report(
+    request: ReportGenerationRequest | None = None,
+) -> ReportGenerationResponse:
+    """Build a deterministic business report from the shared dataset."""
+    dataset = _get_report_dataset()
+    if dataset is None:
+        raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
+
+    profile = get_dataset_profile()
+    if profile is None:
+        raise HTTPException(status_code=400, detail="No dataset has been uploaded.")
+
+    dataset_summary, dataset_quality = _build_report_dataset_details(profile)
+    report_id = _build_report_id(dataset)
+    # Chart generation obtains its own temporary dataset copy from the shared service.
+    # The report copy is only needed for the deterministic identifier.
+    del dataset
+    chart_requests = _build_report_chart_requests(dataset_summary)
+    _generate_report_charts(chart_requests)
+
+    try:
+        from app.services.ai_service import generate_report_insights
+        focus = request.report_focus if request else None
+        ai_insights = generate_report_insights(dataset_summary.model_dump(mode="json"), focus)
+        key_insights = ai_insights["key_insights"]
+        recommendations = ai_insights["recommendations"]
+    except Exception as exc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("AI report generation failed, falling back to deterministic summary: %s", exc)
+        key_insights = _build_key_insights(dataset_summary, request)
+        recommendations = _build_recommendations(dataset_summary)
+
+    report = ReportGenerationResponse(
+        report_id=report_id,
+        generated_at=datetime.now(UTC),
+        dataset_summary=dataset_summary,
+        key_insights=key_insights,
+        recommendations=recommendations,
+        charts_available=[request.chart_type for request in chart_requests],
+        status="completed",
+    )
+    stored_report = report.model_dump(mode="json")
+    stored_report["dataset_quality"] = dataset_quality
+    save_report(stored_report)
+    return report
+
+
+def _get_report_dataset() -> pd.DataFrame | None:
+    """Return the dataset used for report generation."""
+    if not has_dataset():
+        return None
+
+    dataset = get_dataset()
+    return dataset if not dataset.empty or list(dataset.columns) else None
+
+
+def _build_dataset_summary(dataframe: pd.DataFrame) -> ReportDatasetSummary:
+    """Build a report-friendly summary for the shared dataset."""
+    dataset_summary, _ = _build_report_dataset_details(
+        build_dataset_profile(dataframe),
+    )
+    return dataset_summary
+
+
+def _build_report_dataset_details(
+    profile: UploadProfile,
+) -> tuple[ReportDatasetSummary, str]:
+    """Build report summary data and its lightweight quality classification."""
+    dataset_quality, quality_assessment = _build_dataset_quality_details(
+        rows=profile.shape["rows"],
+        columns=profile.shape["columns"],
+        missing_values=profile.missing_values,
+        duplicate_rows=profile.duplicate_rows,
+    )
+
+    return ReportDatasetSummary(
+        shape=profile.shape,
+        missing_values=profile.missing_values,
+        missing_percentage=profile.missing_percentage,
+        dtypes=profile.dtypes,
+        numeric_columns=profile.numeric_columns,
+        categorical_columns=profile.categorical_columns,
+        unique_values=profile.unique_values,
+        duplicate_rows=profile.duplicate_rows,
+        memory_usage_bytes=profile.memory_usage_bytes,
+        numeric_summary=profile.numeric_summary,
+        quality_assessment=quality_assessment,
+    ), dataset_quality
+
+
+def _build_key_insights(
+    summary: ReportDatasetSummary,
+    request: ReportGenerationRequest | None,
+) -> list[str]:
+    """Generate deterministic executive insights from the dataset summary."""
+    rows = summary.shape["rows"]
+    columns = summary.shape["columns"]
+    total_missing = sum(summary.missing_values.values())
+    total_cells = rows * columns
+    missing_rate = (total_missing / total_cells * 100) if total_cells else 0.0
+
+    insights = [
+        f"Dataset contains {rows} rows and {columns} columns.",
+        _missing_value_insight(missing_rate, total_missing),
+        _duplicate_row_insight(summary.duplicate_rows),
+        _column_mix_insight(summary.numeric_columns, summary.categorical_columns),
+        summary.quality_assessment,
+    ]
+
+    if request and request.report_focus:
+        insights.append(f"Requested focus area: {request.report_focus}.")
+
+    return insights
+
+
+def _build_recommendations(summary: ReportDatasetSummary) -> list[str]:
+    """Generate next-step recommendations from the dataset summary."""
+    recommendations: list[str] = []
+
+    if any(count > 0 for count in summary.missing_values.values()):
+        recommendations.append(
+            "Review columns with missing values before downstream reporting or modeling."
+        )
+
+    if summary.duplicate_rows > 0:
+        recommendations.append(
+            "Remove duplicate rows to avoid skewing aggregated business metrics."
+        )
+
+    if summary.numeric_columns:
+        recommendations.append(
+            "Use histogram and box charts to evaluate numeric distributions and outliers."
+        )
+
+    if summary.categorical_columns:
+        recommendations.append(
+            "Segment the dataset by categorical fields to compare performance across groups."
+        )
+
+    if not recommendations:
+        recommendations.append(
+            "The dataset is structurally simple; validate business relevance before deeper analysis."
+        )
+
+    return recommendations
+
+
+def _build_available_charts(summary: ReportDatasetSummary) -> list[str]:
+    """Infer chart types that are likely useful for the uploaded dataset."""
+    charts: list[str] = []
+
+    if summary.numeric_columns:
+        charts.extend(["histogram", "box"])
+
+    if summary.numeric_columns and summary.categorical_columns:
+        charts.extend(["bar", "line", "scatter"])
+
+    return [chart for chart in SUPPORTED_CHART_TYPES if chart in charts]
+
+
+def _build_report_chart_requests(
+    summary: ReportDatasetSummary,
+) -> list[ChartGenerationRequest]:
+    """Choose the validated chart configurations generated with a report."""
+    numeric_columns = summary.numeric_columns
+    categorical_columns = summary.categorical_columns
+    requests: list[ChartGenerationRequest] = []
+
+    if numeric_columns:
+        requests.append(
+            ChartGenerationRequest(
+                chart_type="histogram",
+                x_column=numeric_columns[0],
+            )
+        )
+
+    if numeric_columns and categorical_columns:
+        category_column = _select_report_category_column(summary)
+        numeric_column = numeric_columns[0]
+        requests.extend(
+            [
+                ChartGenerationRequest(
+                    chart_type="box",
+                    x_column=category_column,
+                    y_column=numeric_column,
+                ),
+                ChartGenerationRequest(
+                    chart_type="bar",
+                    x_column=category_column,
+                    y_column=numeric_column,
+                ),
+            ]
+        )
+
+    if len(numeric_columns) >= 2:
+        requests.append(
+            ChartGenerationRequest(
+                chart_type="scatter",
+                x_column=numeric_columns[0],
+                y_column=numeric_columns[1],
+            )
+        )
+
+    return requests
+
+
+def _select_report_category_column(summary: ReportDatasetSummary) -> str:
+    """Choose the lowest-cardinality categorical column for grouped charts.
+
+    Report charts should compare meaningful groups. Selecting the first CSV
+    column can instead select an identifier (for example, an order ID), causing
+    matplotlib to create one box or bar per row. Sparse columns or columns
+    with only one distinct value are ignored.
+    """
+    if not summary.categorical_columns:
+        return ""
+
+    candidates = [
+        column
+        for column in summary.categorical_columns
+        if summary.missing_percentage.get(column, 0.0) < 50.0
+        and summary.unique_values.get(column, 0) > 1
+    ]
+
+    if not candidates:
+        candidates = summary.categorical_columns
+
+    return min(
+        candidates,
+        key=lambda column: summary.unique_values.get(column, float("inf")),
+    )
+
+
+def _generate_report_charts(requests: list[ChartGenerationRequest]) -> None:
+    """Generate report charts without failing a completed report for one chart error."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+    for request in requests:
+        try:
+            generate_chart(request)
+        except Exception as exc:
+            logger.warning("Report chart generation failed for %s: %s", request.chart_type, exc)
+
+
+def _build_report_id(dataframe: pd.DataFrame) -> str:
+    """Create a deterministic report identifier from the dataset contents."""
+    digest = sha256(dataframe.to_csv(index=False).encode("utf-8")).hexdigest()[:12]
+    return f"report-{digest}"
+
+
+def _build_dataset_quality_details(
+    rows: int,
+    columns: int,
+    missing_values: dict[str, int],
+    duplicate_rows: int,
+) -> tuple[str, str]:
+    """Build quality classification and its detailed assessment together."""
+    total_missing = sum(missing_values.values())
+    total_cells = rows * columns
+    missing_rate = (total_missing / total_cells * 100) if total_cells else 0.0
+
+    if total_missing == 0 and duplicate_rows == 0:
+        return "Good", "Dataset quality is strong with no missing values or duplicate rows."
+
+    if missing_rate <= 5 and duplicate_rows == 0:
+        return "Good", "Dataset quality is good with limited missing data and no duplicate rows."
+
+    if missing_rate <= 20:
+        return (
+            "Fair",
+            "Dataset quality is acceptable, but several data-quality checks should be reviewed.",
+        )
+
+    return (
+        "Needs Attention",
+        "Dataset quality requires attention due to significant missing data or duplicates.",
+    )
+
+
+def _missing_value_insight(missing_rate: float, total_missing: int) -> str:
+    """Describe the overall missing-value profile."""
+    if total_missing == 0:
+        return "Missing values are absent, which supports clean downstream analysis."
+
+    if missing_rate <= 5:
+        return "Missing values are low and unlikely to materially affect most analyses."
+
+    if missing_rate <= 20:
+        return "Missing values are moderate and should be reviewed before reporting."
+
+    return "Missing values are high and could materially affect business conclusions."
+
+
+def _duplicate_row_insight(duplicate_rows: int) -> str:
+    """Describe the duplicate-row profile."""
+    if duplicate_rows == 0:
+        return "No duplicate rows were detected in the dataset."
+
+    return f"Duplicate rows were detected ({duplicate_rows}), which may inflate repeated observations."
+
+
+def _column_mix_insight(numeric_columns: list[str], categorical_columns: list[str]) -> str:
+    """Describe the column mix available for analysis."""
+    if numeric_columns and categorical_columns:
+        return "The dataset includes both numeric and categorical columns, enabling segmented quantitative analysis."
+
+    if numeric_columns:
+        return "Numeric columns are available for distribution analysis and trend assessment."
+
+    if categorical_columns:
+        return "Categorical columns are available for grouping and classification-style analysis."
+
+    return "The dataset does not expose analyzable columns for standard business reporting."
