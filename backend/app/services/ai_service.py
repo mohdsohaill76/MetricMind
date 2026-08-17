@@ -151,10 +151,10 @@ def _get_agent_chain():
             detail="MetricMind AI is not configured. Set GROQ_API_KEY to enable chat.",
         )
     has_api_key = bool(settings.GROQ_API_KEY)
-    logger.info("Initializing ChatGroq agent: model=%s, has_api_key=%s", "llama-3.1-8b-instant", has_api_key)
+    logger.info("Initializing ChatGroq agent: model=%s, has_api_key=%s", "openai/gpt-oss-120b", has_api_key)
     try:
         llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-120b",
             temperature=0,
             groq_api_key=settings.GROQ_API_KEY,
         )
@@ -229,10 +229,10 @@ def generate_report_insights(
         )
 
     has_api_key = bool(settings.GROQ_API_KEY)
-    logger.info("Initializing ChatGroq report insights: model=%s, has_api_key=%s", "llama-3.1-8b-instant", has_api_key)
+    logger.info("Initializing ChatGroq report insights: model=%s, has_api_key=%s", "openai/gpt-oss-120b", has_api_key)
     try:
         llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-120b",
             temperature=0,
             groq_api_key=settings.GROQ_API_KEY,
             request_timeout=REPORT_INSIGHTS_TIMEOUT_SECONDS,
@@ -284,7 +284,7 @@ def generate_report_insights(
 # TEMPORARY DIAGNOSTIC HELPER - REMOVE AFTER GROQ MODEL DIAGNOSIS
 # =========================================================================
 async def check_groq_model_availability(
-    target_model: str = "llama-3.1-8b-instant",
+    target_model: str = "openai/gpt-oss-120b",
 ) -> dict[str, Any]:
     """Check whether the configured Groq API key has access to the target model.
 

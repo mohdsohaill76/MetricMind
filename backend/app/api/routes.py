@@ -167,7 +167,7 @@ def generate_ai_report(
 @router.get(
     "/ai/diagnostic",
     summary="Temporary diagnostic for Groq AI model availability",
-    description="Check whether the configured Groq API key has access to llama-3.1-8b-instant.",
+    description="Check whether the configured Groq API key has access to openai/gpt-oss-120b.",
 )
 async def ai_diagnostic(user: AuthenticatedUser) -> Dict[str, Any]:
     """Return safe Groq model availability status for authenticated users."""
