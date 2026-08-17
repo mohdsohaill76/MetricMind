@@ -117,9 +117,18 @@ def test_chat_rejects_invalid_questions(payload: dict[str, str]) -> None:
     assert response.json()["detail"][0]["loc"] == ["body", "question"]
 
 
-def test_request_logging_includes_method_path_status_and_duration(caplog: pytest.LogCaptureFixture) -> None:
+def test_request_logging_includes_method_path_status_and_duration(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Every HTTP request emits a completion log with request details."""
     caplog.set_level("INFO", logger="app.middleware.request_logging")
+
+    class AgentChain:
+        def invoke(self, _: dict[str, str]) -> object:
+            return type("Response", (), {"content": "Retention is trending upward."})()
+
+    monkeypatch.setattr(ai_service, "_get_agent_chain", lambda: AgentChain())
 
     response = client.post("/api/v1/chat", json={"question": "How is retention trending?"})
 
