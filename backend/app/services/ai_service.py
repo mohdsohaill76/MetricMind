@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from functools import lru_cache
 from typing import Any, Callable, Final
 
@@ -12,6 +13,8 @@ from pydantic import BaseModel, Field
 
 from app.config.settings import settings
 from app.services.dataset_operations_service import calculate_metric
+
+logger = logging.getLogger(__name__)
 
 
 REPORT_INSIGHTS_TIMEOUT_SECONDS: Final[float] = 30.0
@@ -146,9 +149,11 @@ def _get_agent_chain():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="MetricMind AI is not configured. Set GROQ_API_KEY to enable chat.",
         )
+    has_api_key = bool(settings.GROQ_API_KEY)
+    logger.info("Initializing ChatGroq agent: model=%s, has_api_key=%s", "openai/gpt-oss-120b", has_api_key)
     try:
         llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-120b",
             temperature=0,
             groq_api_key=settings.GROQ_API_KEY,
         )
@@ -222,9 +227,11 @@ def generate_report_insights(
             detail="MetricMind AI is not configured. Set GROQ_API_KEY to generate report.",
         )
 
+    has_api_key = bool(settings.GROQ_API_KEY)
+    logger.info("Initializing ChatGroq report insights: model=%s, has_api_key=%s", "openai/gpt-oss-120b", has_api_key)
     try:
         llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-120b",
             temperature=0,
             groq_api_key=settings.GROQ_API_KEY,
             request_timeout=REPORT_INSIGHTS_TIMEOUT_SECONDS,
@@ -270,3 +277,4 @@ def generate_report_insights(
         "key_insights": result.key_insights,
         "recommendations": result.recommendations,
     }
+
