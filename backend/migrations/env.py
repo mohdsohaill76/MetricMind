@@ -27,12 +27,23 @@ target_metadata = Base.metadata
 
 # The configured URL is required for offline migrations.  Online migrations
 # use the already-configured shared application engine below.
-config.set_main_option("sqlalchemy.url", str(engine.url))
+config.set_main_option(
+    "sqlalchemy.url",
+    engine.url.render_as_string(hide_password=False),
+)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """Ensure Alembic only manages tables owned by the application metadata."""
+    if type_ == "table" and reflected:
+        table_key = f"{object.schema}.{object.name}" if object.schema else object.name
+        return table_key in target_metadata.tables or object.name in target_metadata.tables
+    return True
 
 
 def run_migrations_offline() -> None:
@@ -54,6 +65,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         include_schemas=True,
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -72,6 +84,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             include_schemas=True,
+            include_object=include_object,
         )
 
         with context.begin_transaction():
