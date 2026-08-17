@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import Navbar from "../../src/components/layout/Navbar";
 import Sidebar from "../../src/components/layout/Sidebar";
@@ -15,6 +16,7 @@ import {
   FaTable,
   FaUsers,
   FaChartLine,
+  FaUpload,
 } from "react-icons/fa6";
 
 import AIInsights from "../../src/components/dashboard/AIInsights";
@@ -120,7 +122,7 @@ export default function Home() {
           {!loading && !dashboardData && (
             <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-start gap-4">
 
                 <div className="rounded-full bg-blue-100 p-3">
                   <FaDatabase className="text-2xl text-blue-600" />
@@ -132,9 +134,18 @@ export default function Home() {
                   </h2>
 
                   <p className="mt-1 text-[var(--foreground)] opacity-80">
-                    Upload a dataset from the AI Generator page to populate
-                    your dashboard with real data.
+                    Upload a CSV dataset to start analyzing your business data and generate AI-powered insights.
                   </p>
+
+                  <div className="mt-4">
+                    <Link
+                      href="/ai-generator"
+                      className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:bg-blue-700 hover:shadow-md"
+                    >
+                      <FaUpload />
+                      Upload Dataset
+                    </Link>
+                  </div>
                 </div>
 
               </div>
