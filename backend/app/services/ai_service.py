@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import json
+import logging
 from functools import lru_cache
 from typing import Any, Callable, Final
 
+import httpx
 from fastapi import HTTPException, status
 
 from pydantic import BaseModel, Field
 
 from app.config.settings import settings
 from app.services.dataset_operations_service import calculate_metric
+
+logger = logging.getLogger(__name__)
 
 
 REPORT_INSIGHTS_TIMEOUT_SECONDS: Final[float] = 30.0
@@ -146,6 +150,8 @@ def _get_agent_chain():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="MetricMind AI is not configured. Set GROQ_API_KEY to enable chat.",
         )
+    has_api_key = bool(settings.GROQ_API_KEY)
+    logger.info("Initializing ChatGroq agent: model=%s, has_api_key=%s", "llama-3.1-8b-instant", has_api_key)
     try:
         llm = ChatGroq(
             model="llama-3.1-8b-instant",
@@ -222,6 +228,8 @@ def generate_report_insights(
             detail="MetricMind AI is not configured. Set GROQ_API_KEY to generate report.",
         )
 
+    has_api_key = bool(settings.GROQ_API_KEY)
+    logger.info("Initializing ChatGroq report insights: model=%s, has_api_key=%s", "llama-3.1-8b-instant", has_api_key)
     try:
         llm = ChatGroq(
             model="llama-3.1-8b-instant",
@@ -270,3 +278,62 @@ def generate_report_insights(
         "key_insights": result.key_insights,
         "recommendations": result.recommendations,
     }
+
+
+# =========================================================================
+# TEMPORARY DIAGNOSTIC HELPER - REMOVE AFTER GROQ MODEL DIAGNOSIS
+# =========================================================================
+async def check_groq_model_availability(
+    target_model: str = "llama-3.1-8b-instant",
+) -> dict[str, Any]:
+    """Check whether the configured Groq API key has access to the target model.
+
+    Returns safe diagnostic information without exposing API keys or credentials.
+    """
+    has_api_key = bool(settings.GROQ_API_KEY)
+    if not has_api_key:
+        return {
+            "has_api_key": False,
+            "target_model": target_model,
+            "model_available": False,
+            "groq_http_status": None,
+            "available_models_count": 0,
+            "error": "GROQ_API_KEY is not configured.",
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                "https://api.groq.com/openai/v1/models",
+                headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
+            )
+            status_code = response.status_code
+            if status_code == 200:
+                data = response.json().get("data", [])
+                available_ids = [m.get("id") for m in data if isinstance(m, dict) and "id" in m]
+                return {
+                    "has_api_key": True,
+                    "target_model": target_model,
+                    "model_available": target_model in available_ids,
+                    "groq_http_status": status_code,
+                    "available_models_count": len(available_ids),
+                    "error": None,
+                }
+            return {
+                "has_api_key": True,
+                "target_model": target_model,
+                "model_available": False,
+                "groq_http_status": status_code,
+                "available_models_count": 0,
+                "error": f"Groq API returned HTTP {status_code}.",
+            }
+    except Exception as exc:
+        return {
+            "has_api_key": True,
+            "target_model": target_model,
+            "model_available": False,
+            "groq_http_status": None,
+            "available_models_count": 0,
+            "error": f"Failed to connect to Groq API: {type(exc).__name__}",
+        }
+
