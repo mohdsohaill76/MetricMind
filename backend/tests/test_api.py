@@ -823,6 +823,7 @@ def test_ai_diagnostic_returns_model_availability(monkeypatch: pytest.MonkeyPatc
     assert data["model_available"] is True
     assert data["groq_http_status"] == 200
     assert data["available_models_count"] == 2
+    assert data["available_models"] == ["llama-3.1-8b-instant", "other-model"]
     assert "Authorization" not in str(data)
     assert "gsk_" not in str(data)
 

@@ -298,6 +298,7 @@ async def check_groq_model_availability(
             "model_available": False,
             "groq_http_status": None,
             "available_models_count": 0,
+            "available_models": [],
             "error": "GROQ_API_KEY is not configured.",
         }
 
@@ -317,6 +318,7 @@ async def check_groq_model_availability(
                     "model_available": target_model in available_ids,
                     "groq_http_status": status_code,
                     "available_models_count": len(available_ids),
+                    "available_models": available_ids,
                     "error": None,
                 }
             return {
@@ -325,6 +327,7 @@ async def check_groq_model_availability(
                 "model_available": False,
                 "groq_http_status": status_code,
                 "available_models_count": 0,
+                "available_models": [],
                 "error": f"Groq API returned HTTP {status_code}.",
             }
     except Exception as exc:
@@ -334,6 +337,7 @@ async def check_groq_model_availability(
             "model_available": False,
             "groq_http_status": None,
             "available_models_count": 0,
+            "available_models": [],
             "error": f"Failed to connect to Groq API: {type(exc).__name__}",
         }
 
