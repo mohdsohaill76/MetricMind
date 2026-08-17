@@ -1,7 +1,7 @@
 """HTTP routes for the MetricMind API."""
 
 import logging
-from typing import Annotated, Any, Dict
+from typing import Annotated, Dict
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -159,19 +159,6 @@ def generate_ai_report(
 ) -> ReportGenerationResponse:
     """Return a structured report derived from the uploaded dataset."""
     return generate_report(request)
-
-
-# =========================================================================
-# TEMPORARY DIAGNOSTIC ENDPOINT - REMOVE AFTER GROQ MODEL DIAGNOSIS
-# =========================================================================
-@router.get(
-    "/ai/diagnostic",
-    summary="Temporary diagnostic for Groq AI model availability",
-    description="Check whether the configured Groq API key has access to openai/gpt-oss-120b.",
-)
-async def ai_diagnostic(user: AuthenticatedUser) -> Dict[str, Any]:
-    """Return safe Groq model availability status for authenticated users."""
-    return await ai_service.check_groq_model_availability()
 
 
 @router.get(

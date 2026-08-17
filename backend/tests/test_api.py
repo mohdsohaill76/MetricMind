@@ -5,7 +5,6 @@ from os import utime
 from pathlib import Path
 from collections.abc import Generator
 from time import time
-from typing import Any
 
 import pandas as pd
 import pytest
@@ -785,57 +784,3 @@ def test_protected_dataset_endpoints_require_authentication(
 
     assert response.status_code == 401
     assert response.json()["message"] == "Could not validate credentials."
-
-
-def test_ai_diagnostic_requires_authentication() -> None:
-    """The diagnostic endpoint requires a valid bearer token."""
-    response = client.get("/api/v1/ai/diagnostic")
-
-    assert response.status_code == 401
-    assert response.json()["message"] == "Could not validate credentials."
-
-
-def test_ai_diagnostic_returns_model_availability(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The diagnostic endpoint queries Groq models and checks openai/gpt-oss-120b."""
-    from unittest.mock import AsyncMock
-
-    mock_response = type(
-        "Response",
-        (),
-        {
-            "status_code": 200,
-            "json": lambda self: {"data": [{"id": "openai/gpt-oss-120b"}, {"id": "other-model"}]},
-        },
-    )()
-
-    async def mock_get(self, url: str, **kwargs: Any) -> object:
-        assert "Authorization" in kwargs.get("headers", {})
-        return mock_response
-
-    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
-
-    response = client.get("/api/v1/ai/diagnostic", headers=_authorization_header())
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["has_api_key"] is True
-    assert data["target_model"] == "openai/gpt-oss-120b"
-    assert data["model_available"] is True
-    assert data["groq_http_status"] == 200
-    assert data["available_models_count"] == 2
-    assert data["available_models"] == ["openai/gpt-oss-120b", "other-model"]
-    assert "Authorization" not in str(data)
-    assert "gsk_" not in str(data)
-
-
-def test_ai_diagnostic_handles_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The diagnostic endpoint reports has_api_key=False when GROQ_API_KEY is not set."""
-    monkeypatch.setattr(ai_service.settings, "GROQ_API_KEY", None)
-
-    response = client.get("/api/v1/ai/diagnostic", headers=_authorization_header())
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["has_api_key"] is False
-    assert data["model_available"] is False
-    assert data["error"] == "GROQ_API_KEY is not configured."

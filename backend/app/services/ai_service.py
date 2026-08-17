@@ -7,7 +7,6 @@ import logging
 from functools import lru_cache
 from typing import Any, Callable, Final
 
-import httpx
 from fastapi import HTTPException, status
 
 from pydantic import BaseModel, Field
@@ -278,66 +277,4 @@ def generate_report_insights(
         "key_insights": result.key_insights,
         "recommendations": result.recommendations,
     }
-
-
-# =========================================================================
-# TEMPORARY DIAGNOSTIC HELPER - REMOVE AFTER GROQ MODEL DIAGNOSIS
-# =========================================================================
-async def check_groq_model_availability(
-    target_model: str = "openai/gpt-oss-120b",
-) -> dict[str, Any]:
-    """Check whether the configured Groq API key has access to the target model.
-
-    Returns safe diagnostic information without exposing API keys or credentials.
-    """
-    has_api_key = bool(settings.GROQ_API_KEY)
-    if not has_api_key:
-        return {
-            "has_api_key": False,
-            "target_model": target_model,
-            "model_available": False,
-            "groq_http_status": None,
-            "available_models_count": 0,
-            "available_models": [],
-            "error": "GROQ_API_KEY is not configured.",
-        }
-
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                "https://api.groq.com/openai/v1/models",
-                headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
-            )
-            status_code = response.status_code
-            if status_code == 200:
-                data = response.json().get("data", [])
-                available_ids = [m.get("id") for m in data if isinstance(m, dict) and "id" in m]
-                return {
-                    "has_api_key": True,
-                    "target_model": target_model,
-                    "model_available": target_model in available_ids,
-                    "groq_http_status": status_code,
-                    "available_models_count": len(available_ids),
-                    "available_models": available_ids,
-                    "error": None,
-                }
-            return {
-                "has_api_key": True,
-                "target_model": target_model,
-                "model_available": False,
-                "groq_http_status": status_code,
-                "available_models_count": 0,
-                "available_models": [],
-                "error": f"Groq API returned HTTP {status_code}.",
-            }
-    except Exception as exc:
-        return {
-            "has_api_key": True,
-            "target_model": target_model,
-            "model_available": False,
-            "groq_http_status": None,
-            "available_models_count": 0,
-            "available_models": [],
-            "error": f"Failed to connect to Groq API: {type(exc).__name__}",
-        }
 
